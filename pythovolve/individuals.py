@@ -2,8 +2,6 @@ import random
 from abc import abstractmethod, ABCMeta
 from typing import Any, List
 
-from pythovolve.problems import City
-
 
 class Individual(metaclass=ABCMeta):
     @property
@@ -17,7 +15,7 @@ class Individual(metaclass=ABCMeta):
         pass
 
     def __repr__(self):
-        return f"{type(self)}({self.phenotype})"
+        return f"{type(self).__name__}({self.phenotype})"
 
 
 class BinaryIndividual(Individual):
@@ -47,7 +45,7 @@ class PathIndividual(Individual):
         return cls(random.sample(range(num_cities), num_cities))
 
     def __str__(self):
-        return " -> ".join((str(city) for city in self.phenotype))
+        return "[" + " -> ".join((str(city) for city in self.phenotype)) + "]"
 
 
 class Population:

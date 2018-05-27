@@ -52,4 +52,4 @@ class TravellingSalesman(Problem):
         raise ValueError(f"Individuals of type {type(individual)} are not supported by {type(TravellingSalesman)}")
 
     def __repr__(self):
-        return f"{type(self)}(num_cities={len(self.cities)})"
+        return f"{type(self).__name__}(num_cities={len(self.cities)})"
