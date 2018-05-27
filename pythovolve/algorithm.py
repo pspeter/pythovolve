@@ -1,5 +1,5 @@
-from abc import ABCMeta, abstractmethod
 import random
+from abc import ABCMeta, abstractmethod
 from typing import Tuple
 
 from .individuals import Individual, BinaryIndividual, PathIndividual
@@ -40,3 +40,28 @@ class TranslocationMutator(Mutator):
         path[mid:end] = reversed(path[mid:end])
         return individual
 
+
+class Crossover(metaclass=ABCMeta):
+    @abstractmethod
+    def __call__(self, parents: Tuple[Individual, Individual]) -> Tuple[Individual, Individual]:
+        pass
+
+
+class CycleCrossover(Crossover):
+    def __call__(self, parents: Tuple[PathIndividual, PathIndividual]) \
+            -> Tuple[PathIndividual, PathIndividual]:
+        first = random.randrange(len(parents[0].phenotype))
+        return self._create_child(*parents, first), self._create_child(*reversed(parents), first)
+
+    @staticmethod
+    def _create_child(parent1: PathIndividual, parent2: PathIndividual,
+                      first_index: int) -> PathIndividual:
+        child = parent2.phenotype[:]
+        child[first_index] = parent1.phenotype[first_index]
+        current = parent1.phenotype.index(parent2.phenotype[first_index])
+
+        while current != first_index:
+            child[current] = parent1.phenotype[current]
+            current = parent1.phenotype.index(parent2.phenotype[current])
+
+        return PathIndividual(child)
