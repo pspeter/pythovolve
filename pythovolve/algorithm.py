@@ -1,6 +1,6 @@
 import random
 from abc import ABCMeta, abstractmethod
-from typing import Tuple
+from typing import Tuple, List
 
 from .individuals import Individual, BinaryIndividual, PathIndividual
 
@@ -65,3 +65,37 @@ class CycleCrossover(Crossover):
             current = parent1.phenotype.index(parent2.phenotype[current])
 
         return PathIndividual(child)
+
+
+class Selection(metaclass=ABCMeta):
+    def __init__(self, num_select: int, num_elite: int = 0):
+        if num_elite > num_select:
+            raise ValueError(f"Number of elites higher than total number selected: {num_elite} > {num_select}")
+        self.num_select = num_select - num_elite
+        self.num_elite = num_elite
+
+    def _split_elites(self, population: List[Individual]) -> Tuple[List[Individual], List[Individual]]:
+        """
+        :param population: Population to be split into elites and non-elites
+        :return: (elites, non-elites)
+        """
+        if self.num_elite == 0:
+            return [], population
+        sorted_population = sorted(population)
+        return sorted_population[:self.num_elite], sorted_population[self.num_elite:]
+
+    @abstractmethod
+    def __call__(self, population: List[Individual]) -> List[Individual]:
+        pass
+
+
+class ProportionalSelection(Selection):
+    def __init__(self, num_select: int, num_elite: int = 0):
+        super().__init__(num_select, num_elite)
+
+    def __call__(self, population: List[Individual]) -> List[Individual]:
+        if len(population) < self.num_select:
+            raise ValueError("Population smaller than num_select")
+        elites, non_elites = self._split_elites(population)
+        weights = [1/indiv.score for indiv in non_elites]
+        return elites + random.choices(non_elites, weights, k=self.num_select)
