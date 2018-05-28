@@ -40,7 +40,7 @@ class Individual:
         if not isinstance(other, Individual):
             return NotImplemented
         try:
-            return self.score < other.score
+            return self.score == other.score
         except ValueError:
             return NotImplemented
 
