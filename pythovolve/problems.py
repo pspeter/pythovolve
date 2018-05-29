@@ -20,7 +20,7 @@ class City:
 
 class Problem(metaclass=ABCMeta):
     @abstractmethod
-    def score(self, individual: Individual) -> float:
+    def score_individual(self, individual: Individual) -> float:
         pass
 
 
@@ -36,8 +36,8 @@ class TravellingSalesman(Problem):
         tsp = cls(cities)
         return tsp
 
-    def score(self, individual: Individual) -> float:
-        super().score(individual)
+    def score_individual(self, individual: Individual) -> None:
+        super().score_individual(individual)
 
         if isinstance(individual, PathIndividual):
             path = [self.cities[idx] for idx in individual.phenotype]
@@ -47,7 +47,8 @@ class TravellingSalesman(Problem):
                 total_distance += start.distance(dest)
 
             total_distance += path[-1].distance(path[0])
-            return 1 / total_distance
+            score = 1 / total_distance
+            individual.score = score
 
         raise ValueError(f"Individuals of type {type(individual)} are not supported by {type(TravellingSalesman)}")
 

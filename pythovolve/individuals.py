@@ -6,6 +6,7 @@ from typing import Any, List, Callable
 @total_ordering
 class Individual:
     """Base class for individuals."""
+
     def __init__(self, phenotype: Any):
         self._score: float = None
         self.phenotype = phenotype
@@ -18,12 +19,9 @@ class Individual:
             raise ValueError("Individual has not been scored yet")
         return self._score
 
-    def calculate_score(self, score_func: Callable[[Any], float]) -> None:
-        """Computes score for individual using the score_func
-
-        :param score_func: Callable taking in an individual and returning a float
-        """
-        self._score = score_func(self)
+    @score.setter
+    def score(self, score: float) -> None:
+        self._score = score
 
     def __repr__(self):
         return f"{type(self).__name__}({self.phenotype})"

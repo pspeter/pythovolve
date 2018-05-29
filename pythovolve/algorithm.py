@@ -2,6 +2,7 @@ import random
 from abc import ABCMeta, abstractmethod
 from typing import Tuple, List
 
+from pythovolve.problems import Problem, TravellingSalesman, City
 from .individuals import Individual, BinaryIndividual, PathIndividual
 
 
@@ -67,7 +68,7 @@ class CycleCrossover(Crossover):
         return PathIndividual(child)
 
 
-class Selection(metaclass=ABCMeta):
+class Selector(metaclass=ABCMeta):
     def __init__(self, num_select: int, num_elite: int = 0):
         if num_elite > num_select:
             raise ValueError(f"Number of elites higher than total number selected: {num_elite} > {num_select}")
@@ -89,7 +90,7 @@ class Selection(metaclass=ABCMeta):
         pass
 
 
-class ProportionalSelection(Selection):
+class ProportionalSelector(Selector):
     def __init__(self, num_select: int, num_elite: int = 0):
         super().__init__(num_select, num_elite)
 
@@ -97,5 +98,5 @@ class ProportionalSelection(Selection):
         if len(population) < self.num_select:
             raise ValueError("Population smaller than num_select")
         elites, non_elites = self._split_elites(population)
-        weights = [1/indiv.score for indiv in non_elites]
+        weights = [1 / indiv.score for indiv in non_elites]
         return elites + random.choices(non_elites, weights, k=self.num_select)
