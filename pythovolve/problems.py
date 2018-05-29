@@ -25,16 +25,16 @@ class Problem(metaclass=ABCMeta):
 
 
 class TravellingSalesman(Problem):
-    def __init__(self, cities: List[City]):
+    def __init__(self, cities: List[City], best_known: Individual = None):
         self.cities = cities
+        self.best_known = best_known
 
     @classmethod
     def create_random(cls, num_cities,
                       x_range: Tuple[float, float] = (0, 100),
                       y_range: Tuple[float, float] = (0, 100)):
         cities = [City.create_random(x_range, y_range) for _ in range(num_cities)]
-        tsp = cls(cities)
-        return tsp
+        return cls(cities)
 
     def score_individual(self, individual: Individual) -> None:
         super().score_individual(individual)
@@ -50,7 +50,10 @@ class TravellingSalesman(Problem):
             score = 1 / total_distance
             individual.score = score
 
-        raise ValueError(f"Individuals of type {type(individual)} are not supported by {type(TravellingSalesman)}")
+            if not self.best_known or individual > self.best_known:
+                self.best_known = individual
+        else:
+            raise ValueError(f"Individuals of type {type(individual)} are not supported by {type(TravellingSalesman)}")
 
     def __repr__(self):
         return f"{type(self).__name__}(num_cities={len(self.cities)})"
