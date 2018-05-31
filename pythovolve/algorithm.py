@@ -1,6 +1,7 @@
 import random
 from typing import Tuple, List
 
+import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
 from pythovolve.problems import Problem, TravellingSalesman
@@ -14,18 +15,29 @@ class GeneticAlgorithm:
     def __init__(self, problem: Problem, population: List[Individual],
                  selector: Selector, crossover: Crossover,
                  mutator: Mutator, num_elites: int = 0,
-                 use_offspring_selection: bool = False):
+                 use_offspring_selection: bool = False,
+                 max_generations=1000,
+                 plot_progress: bool = False):
         self._population: List[Individual] = None
         self.best: Individual = None
         self.current_best: Individual = None
+
+        self.generation = 0
+
         self.problem = problem
         self.selector = selector
         self.crossover = crossover
         self.mutator = mutator
         self.population_size = len(population)
+
+        if self.population_size == 0:
+            raise ValueError("Initial population is empty")
+
         self.population = population
         self.num_elites = num_elites
-        self.use_offspring_selection = use_offspring_selection
+        self.use_offspring_selection = use_offspring_selection  # todo
+
+        self.plot_progress = plot_progress
 
     @property
     def population(self) -> List[Individual]:
@@ -45,18 +57,26 @@ class GeneticAlgorithm:
             self.best = self.current_best
 
     def evolve(self) -> None:
+        if self.plot_progress:
+            progress_plot = ProgressPlot(self)
+            progress_plot.start_animation()
+        else:
+            while not self.stop_evolving:
+                self.evolve_once()
+
+    def evolve_once(self) -> None:
         elites, non_elites = self._split_elites(self.population)
-        selected = self.selector(non_elites)
         children = []
 
-        for _ in range((self.population_size - self.num_elites) // 2):
-            children.extend(self.crossover(random.sample(selected, 2)))
+        for _ in range(self.population_size // 2):
+            children += self.crossover(self.selector(self.population), self.selector(self.population))
 
         # in case the above range() was rounded down, add one more child
         if len(children) < self.population_size:
-            children.append(self.crossover(random.sample(selected, 2))[0])
+            children += self.crossover(self.selector(self.population), self.selector(self.population))[0]
 
         self.population = [self.mutator(child) for child in children] + elites
+        self.generation += 1
 
     def _split_elites(self, population: List[Individual]) -> Tuple[List[Individual], List[Individual]]:
         """
@@ -69,43 +89,59 @@ class GeneticAlgorithm:
         return sorted_population[-self.num_elites:], sorted_population[:-self.num_elites]
 
 
+class ProgressPlot:
+    def __init__(self, algorithm: GeneticAlgorithm):
+        self.algorithm = algorithm
+
+        # set up the plot
+        self.fig, self.ax = plt.subplots()
+        self.ax.set_xlim(0, 100)
+        self.ax.set_ylim(0, .0015)  # todo
+        self.line, = plt.plot([], [], 'r-', animated=True)
+
+        self.best = []
+        self.gens = []
+
+        # setup the animation
+        self.animation = FuncAnimation(self.fig, self._update, blit=True, interval=1)
+
+    def _update(self, gen):
+        _, x_max = self.ax.get_xlim()
+
+        if gen + 1 > x_max * 0.95:
+            self.ax.set_xlim(0, int(x_max * 1.3 + 10))
+            self.ax.figure.canvas.draw()
+
+        _, y_max = self.ax.get_ylim()
+
+        if self.algorithm.best.score > y_max * 0.95:
+            self.ax.set_ylim(0, self.algorithm.best.score * 1.3)
+            self.ax.figure.canvas.draw()
+
+        self.gens.append(gen)
+        self.best.append(self.algorithm.best.score)
+        self.algorithm.evolve_once()
+
+        self.line.set_data(self.gens, self.best)
+
+
+        return self.line,
+
+    def stop(self):
+        self.animation.event_source.stop()
+
+    def start_animation(self):
+        plt.show()
+
+
 if __name__ == "__main__":
-    import matplotlib.pyplot as plt
     random.seed(123)
     n_cities = 30
     tsp = TravellingSalesman.create_random(n_cities)
-    mut1 = InversionMutator(0.05)
-    mut2 = TranslocationMutator(0.05)
-    def mut(x):
-        x = mut1(x)
-        return mut2(x)
+    mut = InversionMutator(0.15)
     cx = CycleCrossover()
-    sel = ProportionalSelector(30)
+    sel = ProportionalSelector()
     pop = [PathIndividual.create_random(n_cities) for _ in range(100)]
-    ga = GeneticAlgorithm(tsp, pop, sel, cx, mut, 3)
-
-    n_gens = 100
-    best = []
-    gens = []
-    fig, ax = plt.subplots()
-    ln, = plt.plot([], [], 'r-', animated=True)
-
-    def init():
-        ax.set_xlim(0, n_gens)
-        ax.set_ylim(0, .0015)
-        return ln,
-
-    def update(gen):
-        gens.append(gen)
-        best.append(ga.best.score)
-        ga.evolve()
-        ln.set_data(gens, best)
-        return ln,
-
-    ani = FuncAnimation(fig, update, frames=n_gens,
-                        init_func=init, blit=True)
-    plt.show()
-
-
-
-    print("best found: ", tsp.best_known.score)  # 0.0011054872608938944
+    ga = GeneticAlgorithm(tsp, pop, sel, cx, mut, 3, plot_progress=True)
+    ga.evolve()
+    print("best found: ", tsp.best_known.score)  # best found:  0.0021516681121798863
