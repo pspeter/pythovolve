@@ -1,108 +1,13 @@
 import random
-from abc import ABCMeta, abstractmethod
 from typing import Tuple, List
 
 from matplotlib.animation import FuncAnimation
 
-from pythovolve.problems import Problem, TravellingSalesman, City
-from .individuals import Individual, BinaryIndividual, PathIndividual
-
-
-class Mutator(metaclass=ABCMeta):
-    def __init__(self, probability: float = 0.1):
-        self.probability = probability
-
-    @abstractmethod
-    def __call__(self, individual: Individual) -> Individual:
-        pass
-
-
-class BitFlipMutator(Mutator):
-    def __init__(self, max_flips: int, probability: float = 0.1):
-        super().__init__(probability)
-        self.max_flips = max_flips
-
-    def __call__(self, individual: BinaryIndividual) -> BinaryIndividual:
-        if random.random() > self.probability:
-            return individual
-
-        len_pheno = len(individual.phenotype)
-        num_flips = random.randint(1, max(len_pheno, self.max_flips))
-        to_flip = random.sample(range(len_pheno), num_flips)
-
-        for flip_index in to_flip:
-            individual.phenotype[flip_index] ^= True  # flips bit
-
-        return individual
-
-
-class InversionMutator(Mutator):
-    def __call__(self, individual: PathIndividual) -> PathIndividual:
-        if random.random() > self.probability:
-            return individual
-
-        path = individual.phenotype
-        start, end = random.sample(list(range(len(path))), 2)
-        path[start:end] = reversed(path[start:end])
-        return individual
-
-
-class TranslocationMutator(Mutator):
-    def __call__(self, individual: PathIndividual) -> PathIndividual:
-        if random.random() > self.probability:
-            return individual
-
-        path = individual.phenotype
-        start, mid, end = random.sample(list(range(len(path))), 3)
-        path[start:mid] = reversed(path[start:mid])
-        path[mid:end] = reversed(path[mid:end])
-        return individual
-
-
-class Crossover(metaclass=ABCMeta):
-    @abstractmethod
-    def __call__(self, parents: Tuple[Individual, Individual]) -> Tuple[Individual, Individual]:
-        pass
-
-
-class CycleCrossover(Crossover):
-    def __call__(self, parents: Tuple[PathIndividual, PathIndividual]) \
-            -> Tuple[PathIndividual, PathIndividual]:
-        first = random.randrange(len(parents[0].phenotype))
-        return self._create_child(*parents, first), self._create_child(*reversed(parents), first)
-
-    @staticmethod
-    def _create_child(parent1: PathIndividual, parent2: PathIndividual,
-                      first_index: int) -> PathIndividual:
-        child = parent2.phenotype[:]
-        child[first_index] = parent1.phenotype[first_index]
-        current = parent1.phenotype.index(parent2.phenotype[first_index])
-
-        while current != first_index:
-            child[current] = parent1.phenotype[current]
-            current = parent1.phenotype.index(parent2.phenotype[current])
-
-        return PathIndividual(child)
-
-
-class Selector(metaclass=ABCMeta):
-    def __init__(self, num_select: int):
-        self.num_select = num_select
-
-    @abstractmethod
-    def __call__(self, population: List[Individual]) -> Tuple[List[Individual], List[Individual]]:
-        pass
-
-
-class ProportionalSelector(Selector):
-    def __init__(self, num_select: int):
-        super().__init__(num_select)
-
-    def __call__(self, population: List[Individual]) -> Tuple[List[Individual], List[Individual]]:
-        if len(population) < self.num_select:
-            raise ValueError("Population smaller than num_select")
-        weights = [indiv.score for indiv in population]
-        return random.choices(population, weights, k=self.num_select)
+from pythovolve.problems import Problem, TravellingSalesman
+from pythovolve.individuals import Individual, PathIndividual
+from pythovolve.crossover import CycleCrossover, Crossover
+from pythovolve.selection import Selector, ProportionalSelector
+from pythovolve.mutation import Mutator, TranslocationMutator, InversionMutator
 
 
 class GeneticAlgorithm:
