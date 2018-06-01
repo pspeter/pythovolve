@@ -1,5 +1,6 @@
 import random
 from abc import ABCMeta, abstractmethod
+from typing import Sequence
 
 from pythovolve.individuals import Individual, BinaryIndividual, PathIndividual
 
@@ -53,3 +54,19 @@ class TranslocationMutator(Mutator):
         path[start:mid] = reversed(path[start:mid])
         path[mid:end] = reversed(path[mid:end])
         return individual
+
+
+class MultiMutator(Mutator):
+    def __init__(self, mutators: Sequence[Mutator], weights: Sequence[float] = None):
+        super().__init__()
+        self.mutators = mutators
+        self.weights = weights
+
+    def __call__(self, population: Sequence[Individual]) -> Individual:
+        mutator = random.choices(self.mutators, self.weights, k=1)[0]
+        return mutator(population)
+
+
+inversion_mutator = InversionMutator()
+translocation_mutator = TranslocationMutator()
+multi_mutator = MultiMutator((inversion_mutator, translocation_mutator))
