@@ -1,4 +1,5 @@
 import random
+from multiprocessing import Array, Queue, Process
 from typing import Tuple, List
 
 import matplotlib.pyplot as plt
@@ -41,6 +42,8 @@ class GeneticAlgorithm:
         self.num_elites = num_elites
         self.use_offspring_selection = use_offspring_selection  # todo
 
+        self.best_scores = []
+        self.generations = []
         self.callbacks = callbacks or []
 
         self.plot_progress = plot_progress
@@ -68,8 +71,16 @@ class GeneticAlgorithm:
 
         self.stop_evolving = False
         if self.plot_progress:
-            progress_plot = ProgressPlot(self)
-            progress_plot.start_animation()
+            data_queue = Queue()
+            plot_process = Process(target=ProgressPlot, args=(self.max_generations, data_queue))
+            try:
+                plot_process.start()
+                while not self.stop_evolving:
+                    self.evolve_once()
+                    data_queue.put((self.generations, self.best_scores))
+            finally:
+                data_queue.close()
+                plot_process.join()
         else:
             while not self.stop_evolving:
                 self.evolve_once()
@@ -93,6 +104,10 @@ class GeneticAlgorithm:
 
         # we don't want to mutate our elites, only the children
         self.population = [self.mutator(child) for child in children] + elites
+
+        self.generations.append(self.generation)
+        self.best_scores.append(1 / self.best.score)
+
         self.generation += 1
         if self.generation >= self.max_generations:
             self.stop_evolving = True
@@ -112,48 +127,52 @@ class GeneticAlgorithm:
 
 
 class ProgressPlot:
-    def __init__(self, algorithm: GeneticAlgorithm):
-        self.algorithm = algorithm
-
+    def __init__(self, max_generations: int, data_queue: Queue):
+        self.max_generations = max_generations
+        self.data_queue = data_queue
         # set up the plot
         self.fig, self.ax = plt.subplots()
-        self.ax.set_xlim(0, 100)
-        self.ax.set_ylim(0, .0015)  # todo
-        self.line, = plt.plot([], [], 'r-', animated=True)
-
-        self.best = []
-        self.gens = []
+        self.line, = plt.plot([], [], 'r-', animated=False)
 
         # setup the animation
-        self.animation = FuncAnimation(self.fig, self._update, blit=True, interval=1)
+        self.animation = FuncAnimation(self.fig, self._update, init_func=self._init,
+                                       blit=True, interval=1000//24)
 
-    def _update(self, gen):
-        _, x_max = self.ax.get_xlim()
+        plt.show()
 
-        if gen + 1 > x_max * 0.95:
-            self.ax.set_xlim(0, int(x_max * 1.3 + 10))
-            self.ax.figure.canvas.draw()
-
-        _, y_max = self.ax.get_ylim()
-
-        if self.algorithm.best.score > y_max * 0.95:
-            self.ax.set_ylim(0, self.algorithm.best.score * 1.3)
-            self.ax.figure.canvas.draw()
-
-        self.gens.append(gen)
-        self.best.append(self.algorithm.best.score)
-        self.algorithm.evolve_once()
-
-        self.line.set_data(self.gens, self.best)
-
-
+    def _init(self):
+        self.ax.clear()
+        self.ax.set_xlim(0, min(self.max_generations - 1, 100))
+        self.ax.set_ylim(0, 1e-5)
+        self.ax.set_xlabel("Generation")
+        self.ax.set_ylabel("Score")
         return self.line,
 
-    def stop(self):
-        self.animation.event_source.stop()
+    def _update(self, _):
+        if not self.data_queue.empty():
+            generations, best_scores = self.data_queue.get()
 
-    def start_animation(self):
-        plt.show()
+            # get newest result
+            while not self.data_queue.empty():
+                generations, best_scores = self.data_queue.get()
+
+            # update range of x-axis
+            _, x_max = self.ax.get_xlim()
+            if generations[-1] + 1 > x_max * 0.95 and not x_max == self.max_generations - 1:
+                self.ax.set_xlim(0, min(self.max_generations - 1, int(x_max * 1.5 + 10)))
+                print("update x")
+                self.ax.figure.canvas.draw()
+
+            # update range of y-axis
+            _, y_max = self.ax.get_ylim()
+            if best_scores[-1] > y_max * 0.95:
+                self.ax.set_ylim(0, best_scores[-1] * 1.5)
+                print("update y")
+                self.ax.figure.canvas.draw()
+
+            self.line.set_data(generations, best_scores)
+
+        return self.line,
 
 
 if __name__ == "__main__":
@@ -164,6 +183,9 @@ if __name__ == "__main__":
     cx = CycleCrossover()
     sel = ProportionalSelector()
     pop = [PathIndividual.create_random(n_cities) for _ in range(100)]
-    ga = GeneticAlgorithm(tsp, pop, sel, cx, mut, 3, plot_progress=True)
+    import time
+    start = time.time()
+    ga = GeneticAlgorithm(tsp, pop, sel, cx, mut, 3, max_generations=500, plot_progress=True)
     ga.evolve()
+    print("time: ", time.time() - start)
     print("best found: ", tsp.best_known.score)  # best found:  0.0021516681121798863
