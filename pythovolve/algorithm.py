@@ -4,12 +4,13 @@ from typing import Tuple, List
 
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+import seaborn as sns
 
 from pythovolve.callbacks import Callback
 from pythovolve.problems import Problem, TravellingSalesman
 from pythovolve.individuals import Individual, PathIndividual
-from pythovolve.crossover import Crossover, CycleCrossover
-from pythovolve.selection import Selector, ProportionalSelector, TournamentSelector, LinearRankSelector
+from pythovolve.crossover import Crossover, CycleCrossover, order_crossover, cycle_crossover
+from pythovolve.selection import Selector, ProportionalSelector, TournamentSelector, LinearRankSelector, multi_selector
 from pythovolve.mutation import Mutator, InversionMutator
 
 
@@ -43,6 +44,7 @@ class GeneticAlgorithm:
         self.use_offspring_selection = use_offspring_selection  # todo
 
         self.best_scores = []
+        self.current_best_scores = []
         self.generations = []
         self.callbacks = callbacks or []
 
@@ -80,9 +82,7 @@ class GeneticAlgorithm:
                 time.sleep(1)  # wait for figure to open
                 while not self.stop_evolving:
                     self.evolve_once()
-                    data_queue.put((self.generations, self.best_scores))
-            except BrokenPipeError:
-                pass
+                    data_queue.put((self.generations, self.current_best_scores, self.best_scores))
             finally:
                 plot_process.join()
 
@@ -101,7 +101,8 @@ class GeneticAlgorithm:
         children = []
 
         for _ in range(self.population_size // 2):
-            children += self.crossover(self.selector(self.population), self.selector(self.population))
+            father, mother = self.selector(self.population), self.selector(self.population)
+            children += self.crossover(father, mother)
 
         # in case the above range() was rounded down, add one more child
         if len(children) < self.population_size:
@@ -112,6 +113,7 @@ class GeneticAlgorithm:
 
         self.generations.append(self.generation)
         self.best_scores.append(1 / self.best.score)
+        self.current_best_scores.append(1 / self.current_best.score)
 
         self.generation += 1
         if self.generation >= self.max_generations:
@@ -136,60 +138,79 @@ class ProgressPlot:
         self.max_generations = max_generations
         self.data_queue = data_queue
         # set up the plot
+        sns.set()
         self.fig, self.ax = plt.subplots()
-        self.line, = plt.plot([], [], 'r-', animated=False)
+        self.total_line, = plt.plot([], [], 'r-', animated=True, label="Total best")
+        self.current_line, = plt.plot([], [], 'b:', animated=True, label="Generation best")
 
         # setup the animation
         self.animation = FuncAnimation(self.fig, self._update, init_func=self._init,
                                        blit=True, interval=1000 // 24)
 
+        self.legend = plt.legend()
         plt.show()
 
     def _init(self):
-        self.ax.clear()
-        self.ax.set_xlim(0, min(self.max_generations - 1, 100))
-        self.ax.set_ylim(0, 1e-5)
+        if not self.data_queue.empty():
+            x_values, current_best, total_best = self.data_queue.get()
+            x_max = min(self.max_generations - 1, int(len(x_values) * 2 + 10))
+            y_max = max(total_best) * 1.2
+        else:
+            x_max = 100
+            y_max = 1e-5
+
+        self.ax.set_xlim(0, x_max)
+        self.ax.set_ylim(0, y_max)
         self.ax.set_xlabel("Generation")
         self.ax.set_ylabel("Score")
-        return self.line,
+
+        return self.current_line, self.total_line, self.legend
 
     def _update(self, _):
         if not self.data_queue.empty():
-            x_values, y_values = self.data_queue.get()
+            x_values, current_best, total_best = self.data_queue.get()
 
             # get newest result
             while not self.data_queue.empty():
-                x_values, y_values = self.data_queue.get()
+                x_values, current_best, total_best = self.data_queue.get()
 
             # update range of x-axis
             _, x_max = self.ax.get_xlim()
+            # if x_values[-1] + 1 >= x_max and not x_max == self.max_generations - 1:
+            #     self.ax.set_xlim(0, x_max + 1)
             if x_values[-1] + 1 > x_max * 0.95 and not x_max == self.max_generations - 1:
-                self.ax.set_xlim(0, min(self.max_generations - 1, int(x_max * 1.5 + 10)))
+                self.ax.set_xlim(0, min(self.max_generations - 1, int(x_max * 2 + 10)))
                 self.ax.figure.canvas.draw()
 
             # update range of y-axis
             _, y_max = self.ax.get_ylim()
-            if y_values[-1] > y_max * 0.95:
-                self.ax.set_ylim(0, y_values[-1] * 1.5)
+            if max(total_best) > y_max * 0.95:
+                self.ax.set_ylim(0, max(total_best) * 1.3)
                 self.ax.figure.canvas.draw()
 
-            self.line.set_data(x_values, y_values)
+            self.current_line.set_data(x_values, current_best)
+            self.total_line.set_data(x_values, total_best)
 
-        return self.line,
+        return self.current_line, self.total_line, self.legend
 
 
 if __name__ == "__main__":
     random.seed(123)
-    n_cities = 50
+    n_cities = 100
     tsp = TravellingSalesman.create_random(n_cities)
     mut = InversionMutator(0.15)
-    cx = CycleCrossover()
-    sel = TournamentSelector()
+    cx = order_crossover
+    sel = multi_selector
     pop = [PathIndividual.create_random(n_cities) for _ in range(100)]
     import time
 
     start = time.time()
-    ga = GeneticAlgorithm(tsp, pop, sel, cx, mut, 3, max_generations=1500, plot_progress=True)
+    ga = GeneticAlgorithm(tsp, pop, sel, cx, mut, 0, max_generations=500, plot_progress=True)
     ga.evolve()
     print("time: ", time.time() - start)
     print("best found: ", tsp.best_known.score)
+
+    # OX 0.0014488670397757417
+    # CX 0.001345505179329658
+
+
