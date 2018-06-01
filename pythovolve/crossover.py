@@ -29,3 +29,36 @@ class CycleCrossover(Crossover):
             current = parent1.phenotype.index(parent2.phenotype[current])
 
         return PathIndividual(child)
+
+
+class OrderCrossover(Crossover):
+    def __call__(self, mother: PathIndividual, father: PathIndividual) \
+            -> Tuple[PathIndividual, PathIndividual]:
+        idx1, idx2 = random.sample(range(len(mother.phenotype)), k=2)
+        return self._create_child(mother, father, idx1, idx2), self._create_child(father, mother, idx1, idx2)
+
+    @staticmethod
+    def _create_child(parent1: PathIndividual, parent2: PathIndividual,
+                      start: int, end: int) -> PathIndividual:
+        child = parent1.phenotype[:]
+        if start > end:
+            included = child[:end] + child[start:]
+        else:
+            included = child[start:end]
+
+        missing = [g for g in parent2.phenotype if g not in included]
+
+        if start > end:
+            child[end:start] = missing
+        else:
+            child[:start] = missing[:start]
+            child[end:] = missing[start:]
+
+        return PathIndividual(child)
+
+
+cycle_crossover = CycleCrossover()
+order_crossover = OrderCrossover()
+
+
+
