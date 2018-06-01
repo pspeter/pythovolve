@@ -4,6 +4,7 @@ from typing import Tuple, List
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
+from pythovolve.callbacks import EarlyStopper, Callback
 from pythovolve.problems import Problem, TravellingSalesman
 from pythovolve.individuals import Individual, PathIndividual
 from pythovolve.crossover import CycleCrossover, Crossover
@@ -17,11 +18,13 @@ class GeneticAlgorithm:
                  mutator: Mutator, num_elites: int = 0,
                  use_offspring_selection: bool = False,
                  max_generations=1000,
+                 callbacks: List[Callback] = None,
                  plot_progress: bool = False):
         self._population: List[Individual] = None
         self.best: Individual = None
         self.current_best: Individual = None
 
+        self.stop_evolving = False
         self.generation = 0
 
         self.problem = problem
@@ -29,6 +32,7 @@ class GeneticAlgorithm:
         self.crossover = crossover
         self.mutator = mutator
         self.population_size = len(population)
+        self.max_generations = max_generations
 
         if self.population_size == 0:
             raise ValueError("Initial population is empty")
@@ -36,6 +40,8 @@ class GeneticAlgorithm:
         self.population = population
         self.num_elites = num_elites
         self.use_offspring_selection = use_offspring_selection  # todo
+
+        self.callbacks = callbacks or []
 
         self.plot_progress = plot_progress
 
@@ -57,6 +63,10 @@ class GeneticAlgorithm:
             self.best = self.current_best
 
     def evolve(self) -> None:
+        for callback in self.callbacks:
+            callback.on_train_start()
+
+        self.stop_evolving = False
         if self.plot_progress:
             progress_plot = ProgressPlot(self)
             progress_plot.start_animation()
@@ -64,7 +74,13 @@ class GeneticAlgorithm:
             while not self.stop_evolving:
                 self.evolve_once()
 
+        for callback in self.callbacks:
+            callback.on_train_end()
+
     def evolve_once(self) -> None:
+        for callback in self.callbacks:
+            callback.on_generation_start()
+
         elites, non_elites = self._split_elites(self.population)
         children = []
 
@@ -75,8 +91,14 @@ class GeneticAlgorithm:
         if len(children) < self.population_size:
             children += self.crossover(self.selector(self.population), self.selector(self.population))[0]
 
+        # we don't want to mutate our elites, only the children
         self.population = [self.mutator(child) for child in children] + elites
         self.generation += 1
+        if self.generation >= self.max_generations:
+            self.stop_evolving = True
+
+        for callback in self.callbacks:
+            callback.on_generation_end()
 
     def _split_elites(self, population: List[Individual]) -> Tuple[List[Individual], List[Individual]]:
         """
