@@ -34,6 +34,9 @@ class BitFlipMutator(Mutator):
 
 
 class InversionMutator(Mutator):
+    def __init__(self, probability: float = 0.1):
+        super().__init__(probability)
+
     def __call__(self, individual: PathIndividual) -> PathIndividual:
         if random.random() > self.probability:
             return individual
@@ -67,6 +70,6 @@ class MultiMutator(Mutator):
         return mutator(population)
 
 
-inversion_mutator = InversionMutator()
-translocation_mutator = TranslocationMutator()
+inversion_mutator = InversionMutator(0.2)
+translocation_mutator = TranslocationMutator(0.2)
 multi_mutator = MultiMutator((inversion_mutator, translocation_mutator))
