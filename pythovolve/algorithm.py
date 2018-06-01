@@ -1,16 +1,16 @@
 import random
-from multiprocessing import Array, Queue, Process
+from multiprocessing import Queue, Process
 from typing import Tuple, List
 
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
-from pythovolve.callbacks import EarlyStopper, Callback
+from pythovolve.callbacks import Callback
 from pythovolve.problems import Problem, TravellingSalesman
 from pythovolve.individuals import Individual, PathIndividual
-from pythovolve.crossover import CycleCrossover, Crossover
-from pythovolve.selection import Selector, ProportionalSelector
-from pythovolve.mutation import Mutator, TranslocationMutator, InversionMutator
+from pythovolve.crossover import Crossover, CycleCrossover
+from pythovolve.selection import Selector, ProportionalSelector, TournamentSelector, LinearRankSelector
+from pythovolve.mutation import Mutator, InversionMutator
 
 
 class GeneticAlgorithm:
@@ -46,6 +46,8 @@ class GeneticAlgorithm:
         self.generations = []
         self.callbacks = callbacks or []
 
+        # Note: interactive plotting has only been tested with backend TkAgg and
+        # does definitely not work in Pycharm's SciView as of version 2018.1.4
         self.plot_progress = plot_progress
 
     @property
@@ -75,12 +77,15 @@ class GeneticAlgorithm:
             plot_process = Process(target=ProgressPlot, args=(self.max_generations, data_queue))
             try:
                 plot_process.start()
+                time.sleep(1)  # wait for figure to open
                 while not self.stop_evolving:
                     self.evolve_once()
                     data_queue.put((self.generations, self.best_scores))
+            except BrokenPipeError:
+                pass
             finally:
-                data_queue.close()
                 plot_process.join()
+
         else:
             while not self.stop_evolving:
                 self.evolve_once()
@@ -136,7 +141,7 @@ class ProgressPlot:
 
         # setup the animation
         self.animation = FuncAnimation(self.fig, self._update, init_func=self._init,
-                                       blit=True, interval=1000//24)
+                                       blit=True, interval=1000 // 24)
 
         plt.show()
 
@@ -150,42 +155,41 @@ class ProgressPlot:
 
     def _update(self, _):
         if not self.data_queue.empty():
-            generations, best_scores = self.data_queue.get()
+            x_values, y_values = self.data_queue.get()
 
             # get newest result
             while not self.data_queue.empty():
-                generations, best_scores = self.data_queue.get()
+                x_values, y_values = self.data_queue.get()
 
             # update range of x-axis
             _, x_max = self.ax.get_xlim()
-            if generations[-1] + 1 > x_max * 0.95 and not x_max == self.max_generations - 1:
+            if x_values[-1] + 1 > x_max * 0.95 and not x_max == self.max_generations - 1:
                 self.ax.set_xlim(0, min(self.max_generations - 1, int(x_max * 1.5 + 10)))
-                print("update x")
                 self.ax.figure.canvas.draw()
 
             # update range of y-axis
             _, y_max = self.ax.get_ylim()
-            if best_scores[-1] > y_max * 0.95:
-                self.ax.set_ylim(0, best_scores[-1] * 1.5)
-                print("update y")
+            if y_values[-1] > y_max * 0.95:
+                self.ax.set_ylim(0, y_values[-1] * 1.5)
                 self.ax.figure.canvas.draw()
 
-            self.line.set_data(generations, best_scores)
+            self.line.set_data(x_values, y_values)
 
         return self.line,
 
 
 if __name__ == "__main__":
     random.seed(123)
-    n_cities = 30
+    n_cities = 50
     tsp = TravellingSalesman.create_random(n_cities)
     mut = InversionMutator(0.15)
     cx = CycleCrossover()
-    sel = ProportionalSelector()
+    sel = TournamentSelector()
     pop = [PathIndividual.create_random(n_cities) for _ in range(100)]
     import time
+
     start = time.time()
-    ga = GeneticAlgorithm(tsp, pop, sel, cx, mut, 3, max_generations=500, plot_progress=True)
+    ga = GeneticAlgorithm(tsp, pop, sel, cx, mut, 3, max_generations=1500, plot_progress=True)
     ga.evolve()
     print("time: ", time.time() - start)
-    print("best found: ", tsp.best_known.score)  # best found:  0.0021516681121798863
+    print("best found: ", tsp.best_known.score)

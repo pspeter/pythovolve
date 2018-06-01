@@ -41,12 +41,11 @@ class TravellingSalesman(Problem):
 
         if isinstance(individual, PathIndividual):
             path = [self.cities[idx] for idx in individual.phenotype]
-            total_distance = 0.0
+            total_distance = path[-1].distance(path[0])
 
             for start, dest in zip(path, path[1:]):
                 total_distance += start.distance(dest)
 
-            total_distance += path[-1].distance(path[0])
             score = 1 / total_distance
             individual.score = score
 
