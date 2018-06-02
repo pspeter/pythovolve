@@ -2,7 +2,9 @@ import random
 from abc import ABCMeta, abstractmethod
 from typing import List, Tuple, Dict
 
-from .individuals import Individual, PathIndividual
+from sympy.parsing.sympy_parser import parse_expr
+
+from .individuals import Individual, PathIndividual, RealValueIndividual
 
 
 class City:
@@ -13,15 +15,17 @@ class City:
     def distance(self, destination) -> float:
         return (abs(self.x - destination.x) ** 2 + abs(self.y - destination.y) ** 2) ** 0.5
 
-
     @staticmethod
     def create_random(x_range: Tuple[float, float], y_range: Tuple[float, float]):
         return City(random.uniform(*x_range), random.uniform(*y_range))
 
 
 class Problem(metaclass=ABCMeta):
+    def __init__(self, best_known: Individual = None):
+        self.best_known = best_known
+
     @abstractmethod
-    def score_individual(self, individual: Individual) -> float:
+    def score_individual(self, individual: Individual) -> None:
         pass
 
     @abstractmethod
@@ -33,8 +37,8 @@ class TravellingSalesman(Problem):
     valid_individuals: Dict[str, Individual] = {"path": PathIndividual}
 
     def __init__(self, cities: List[City], best_known: Individual = None):
+        super().__init__(best_known)
         self.cities = cities
-        self.best_known = best_known
 
     @classmethod
     def create_random(cls, num_cities,
@@ -68,3 +72,36 @@ class TravellingSalesman(Problem):
 
     def __repr__(self):
         return f"{type(self).__name__}(num_cities={len(self.cities)})"
+
+
+class MultiDimFunction(Problem):
+    valid_individuals: Dict[str, Individual] = {"real": RealValueIndividual}
+
+    def __init__(self, expression: str, vector_length: int,
+                 search_domain: Tuple[float, float] = (-1, 1),
+                 best_known: Individual = None):
+        super().__init__(best_known)
+        self.expression = expression
+        self.vector_length = vector_length
+        self.search_domain = search_domain
+
+    def create_individual(self, individual_type: str = "path") -> Individual:
+        if individual_type in self.valid_individuals:
+            ind = self.valid_individuals[individual_type]
+            return ind.create_random(self.vector_length, self.search_domain)
+
+        raise ValueError(f"Type {individual_type} not supported. Expected one of {self.valid_individuals}")
+
+    def score_individual(self, individual: Individual) -> None:
+        if isinstance(individual, RealValueIndividual):
+            super().score_individual(individual)
+
+            individual.score = parse_expr(self.expression, {"x": individual.phenotype})
+
+            if not self.best_known or individual > self.best_known:
+                self.best_known = individual
+        else:
+            raise ValueError(f"Individuals of type {type(individual)} are not supported by {type(TravellingSalesman)}")
+
+    def __repr__(self):
+        return f"{type(self).__name__}(expression={self.expression})"

@@ -8,5 +8,5 @@ setup(name='pythovolve',
       author_email='peter.schmidb@gmail.com',
       license='MIT',
       packages=['pythovolve'],
-      install_requires=["matplotlib", "seaborn"],
+      install_requires=["matplotlib", "seaborn", 'sympy'],
       zip_safe=False)
