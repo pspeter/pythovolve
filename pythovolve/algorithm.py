@@ -64,7 +64,6 @@ class EvolutionAlgorithm(metaclass=ABCMeta):
         self.current_best = min(self.population)
 
         if self.best is None or self.current_best < self.best:
-            print("new best:", self.current_best.score)
             self.best = self.current_best
 
     def evolve(self) -> None:
@@ -79,7 +78,7 @@ class EvolutionAlgorithm(metaclass=ABCMeta):
                 time.sleep(2)  # wait for figure to open
                 while not self.stop_evolving:
                     self.evolve_once()
-                    data_queue.put((self.current_best_scores, self.best_scores, self.best))
+                    data_queue.put((self.current_best.score, self.best))
             finally:
                 plot_process.join()
 
@@ -177,6 +176,73 @@ class GeneticAlgorithm(EvolutionAlgorithm):
             children += self.crossover(father, mother)[:1]
 
         return children
+
+
+class OSGeneticAlgorithm(GeneticAlgorithm):
+    """Genetic Algorithm (GA) implementation using offspring selection (OS) as described by
+        Affenzeller M., Wagner S. (2005)
+
+    """
+
+    def __init__(self, problem: Problem, selector: Selector,
+                 crossover: Crossover, mutator: Mutator,
+                 population_size: int = 100, num_elites: int = 0,
+                 max_generations: int = 1000, max_selection_pressure: float = 10,
+                 success_ratio: float = 0.5,
+                 comparison_factor_bounds: Tuple[float, float] = (0., 1.),
+                 callbacks: Sequence[Callback] = None,
+                 plot_progress: bool = False):
+        super().__init__(problem, selector, crossover, mutator, population_size,
+                         num_elites, max_generations, callbacks, plot_progress)
+        self.comparison_factor_bounds = comparison_factor_bounds
+        self.comparison_factor = comparison_factor_bounds[0]
+        self._comparison_factor_increase = (comparison_factor_bounds[1] -
+                                            comparison_factor_bounds[0]) / self.max_generations
+        self.max_selection_pressure = max_selection_pressure
+        self.success_ratio = success_ratio
+        self.selection_pressure = 0
+
+    def _generate_children(self):
+        success_children = []
+        failure_children = []
+
+        while len(success_children) < self.success_ratio * self.population_size:
+            father, mother = self.selector(self.population), self.selector(self.population)
+            child1, child2 = self.crossover(father, mother)
+
+            if self._is_successful(child1, father, mother):
+                success_children.append(child1)
+            else:
+                failure_children.append(child1)
+
+            if self._is_successful(child2, father, mother):
+                success_children.append(child2)
+            else:
+                failure_children.append(child2)
+
+            self.selection_pressure = (len(failure_children) + len(success_children)
+                                       + self.population_size) / self.population_size
+
+            if self.selection_pressure > self.max_selection_pressure:
+                self.stop_evolving = True
+                break
+
+        self.comparison_factor += self._comparison_factor_increase
+
+        # if success ratio was reached before enough children were produced for a full
+        # new generation, create more children
+        while len(failure_children) + len(success_children) < self.population_size:
+            father, mother = self.selector(self.population), self.selector(self.population)
+            failure_children.extend(self.crossover(father, mother))
+
+        chosen = success_children + random.sample(failure_children, k=self.population_size - len(success_children))
+        return [self.mutator(child) for child in chosen]
+
+    def _is_successful(self, child: Individual, parent1: Individual, parent2: Individual) -> bool:
+        self.problem.score_individual(child)
+        parents = sorted([parent1, parent2])
+        limit = parents[0].score * self.comparison_factor + parents[1].score * (1 - self.comparison_factor)
+        return child.score < limit
 
 
 class EvolutionStrategy(EvolutionAlgorithm):
@@ -277,7 +343,8 @@ class ProgressPlot:
             self.axes = [axes]
 
         self.data_queue = data_queue
-        self.data = None
+        self.current_best_scores = []
+        self.best_scores = []
 
         self.total_line, = self.axes[0].plot([], [], 'r-', animated=True, label="Total best")
         self.current_line, = self.axes[0].plot([], [], 'g.', animated=True, label="Generation best")
@@ -293,16 +360,18 @@ class ProgressPlot:
 
     def _get_newest_data(self):
         while not self.data_queue.empty():
-            self.data = self.data_queue.get()
+            current_best_score, best = self.data_queue.get()
+            self.current_best_scores.append(current_best_score)
+            self.best_scores.append(best.score)
+            self.best = best
             self.stale = True
 
     def _init(self):
         self._get_newest_data()
 
-        if self.data:
-            current_best, total_best, _ = self.data
-            x_max = min(self.max_generations - 1, int(len(current_best) * 2 + 10))
-            y_max = max(total_best) * 1.2
+        if len(self.best_scores) > 0:
+            x_max = min(self.max_generations - 1, int(len(self.current_best_scores) * 2 + 10))
+            y_max = max(self.best_scores) * 1.2
         else:
             x_max = 100
             y_max = 1e-5
@@ -321,24 +390,23 @@ class ProgressPlot:
     def _update(self, _):
         self._get_newest_data()
 
-        if self.data:
+        if len(self.best_scores) > 0 and self.stale:
             ax = self.axes[0]
-            current_best, total_best, *_ = self.data
 
             # update range of x-axis
             _, x_max = ax.get_xlim()
-            if len(current_best) + 1 > x_max * 0.95 and not x_max == self.max_generations - 1:
+            if len(self.current_best_scores) + 1 > x_max * 0.95 and not x_max == self.max_generations - 1:
                 ax.set_xlim(0, min(self.max_generations - 1, int(x_max * 2 + 10)))
                 ax.figure.canvas.draw()
 
             # update range of y-axis
             _, y_max = ax.get_ylim()
-            if max(total_best) > y_max * 0.95:
-                ax.set_ylim(0, max(total_best) * 1.3)
+            if self.best.score > y_max * 0.95:
+                ax.set_ylim(0, self.best.score * 1.3)
                 ax.figure.canvas.draw()
 
-            #self.current_line.set_data(range(len(current_best), current_best)
-            self.total_line.set_data(range(len(current_best)), total_best)
+            # self.current_line.set_data(range(len(current_best), current_best)
+            self.total_line.set_data(range(len(self.best_scores)), self.best_scores)
 
         return self.current_line, self.total_line, self.legend
 
@@ -357,7 +425,7 @@ class TSPPlot(ProgressPlot):
         ax = self.axes[1]
         area = self.problem.defined_area
 
-        ax.set_title("Path")
+        ax.set_title("Best Solution")
         ax.set_xlim(area.min.x, area.max.x)
         ax.set_ylim(area.min.y, area.max.y)
 
@@ -378,7 +446,7 @@ class TSPPlot(ProgressPlot):
         return (self.current_line, self.total_line, self.legend, *self.path_lines)
 
     def _plot_paths(self):
-        if not self.data or not self.stale:
+        if not self.best_scores or not self.stale:
             return
 
         ax = self.axes[1]
@@ -386,8 +454,7 @@ class TSPPlot(ProgressPlot):
         for line in self.path_lines:
             del line
 
-        best = self.data[2]
-        path = [self.problem.cities[idx] for idx in best.phenotype]
+        path = [self.problem.cities[idx] for idx in self.best.phenotype]
         self.path_lines = ax.plot([path[-1].x, path[0].x], [path[-1].y, path[0].y], "k-")
 
         for start, dest in zip(path, path[1:]):
@@ -396,14 +463,21 @@ class TSPPlot(ProgressPlot):
 
 if __name__ == "__main__":
     random.seed(123)
+
+    n_cities = 60
+    tsp = TravellingSalesman.create_random(n_cities)
+    #mut = multi_path_mutator
+    #cx = multi_crossover
+    sel = multi_selector
+
     # prob = goldstein_price_problem
     # print("Problem:", prob.expression)
     # print("Best known so far:", prob.best_known)
-    # mut = RealValueMutator(1)
-    # cx = single_point_crossover
+    mut = RealValueMutator(1)
+    cx = single_point_crossover
     # sel = multi_selector
 
-    # es = EvolutionStrategy(prob, sel, mut, sigma_start=0.5,
+    # es = EvolutionStrategy(tsp, sel, mut, sigma_start=0.5,
     #                        keep_parents=False, max_generations=500, plot_progress=True)
     # es.evolve()
     # print("best:", es.best)
@@ -411,14 +485,12 @@ if __name__ == "__main__":
     # ga = GeneticAlgorithm(prob, sel, cx, mut, 100, 3, max_generations=100, plot_progress=True)
     # ga.evolve()
     # print("best:", ga.best)
-
-    n_cities = 130
-    tsp = TravellingSalesman.create_random(n_cities)
-    mut = multi_path_mutator
-    cx = multi_crossover
-    sel = multi_selector
-    import time
-
-    ga = GeneticAlgorithm(tsp, sel, cx, mut, 100, 1, max_generations=20000, plot_progress=True)
+    start = time.time()
+    ga = OSGeneticAlgorithm(goldstein_price_problem, sel, cx, mut, 200, 1, comparison_factor_bounds=(0.5, 1),
+                            max_generations=100, plot_progress=False)
     ga.evolve()
-    print("best found: ", ga.best)
+    print("OSGA best found: ", ga.best, "in", time.time() - start, "seconds")
+    start = time.time()
+    ga = GeneticAlgorithm(goldstein_price_problem, sel, cx, mut, 200, 1, max_generations=500, plot_progress=False)
+    ga.evolve()
+    print("GA best found: ", ga.best, "in", time.time() - start, "seconds")

@@ -129,7 +129,7 @@ class MultiDimFunction(Problem):
         return f"{type(self).__name__}(expression={self.expression})"
 
 
-sphere_problem = MultiDimFunction("Sum(x[0]**2, (i, 0, 3))", 4, (-5.12, 5.12),
+sphere_problem = MultiDimFunction("Sum(x[0]**2, (i, 0, 100))", 100, (-5.12, 5.12),
                                   best_known=RealValueIndividual([0, 0, 0, 0]))
 
 _goldstein_price = "(1 + (x[0] + x[1] + 1)**2 * (19 - 14*x[0] + 3*x[0]**2 - 14*x[1] + 6*x[0]*x[1] + 3*x[1]**2)) *" \

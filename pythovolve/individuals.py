@@ -1,6 +1,6 @@
 import random
 from functools import total_ordering
-from typing import Any, List, Callable, Tuple
+from typing import Any, List, Tuple
 
 
 @total_ordering
@@ -49,6 +49,9 @@ class Individual:
         except ValueError:
             return NotImplemented
 
+    def __str__(self):
+        return f"{type(self).__name__}({str(self.phenotype)}) with score {self.score}"
+
 
 class BinaryIndividual(Individual):
     def __init__(self, phenotype: List[bool]):
@@ -76,9 +79,6 @@ class PathIndividual(Individual):
     def create_random(cls, size: int):
         return cls(random.sample(range(size), size))
 
-    def __str__(self):
-        return "Path[" + " -> ".join((str(city) for city in self.phenotype)) + "]"
-
 
 class RealValueIndividual(Individual):
     def __init__(self, phenotype: List[float], value_range: Tuple[float, float] = (-1, 1)):
@@ -91,6 +91,3 @@ class RealValueIndividual(Individual):
     @classmethod
     def create_random(cls, size: int, value_range: Tuple[float, float] = (-1, 1)):
         return cls([random.uniform(*value_range) for _ in range(size)], value_range)
-
-    def __str__(self):
-        return f"{type(self).__name__}({str(self.phenotype)}) with score {self.score}"
