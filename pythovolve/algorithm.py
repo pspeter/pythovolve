@@ -1,7 +1,8 @@
 import random
 from abc import ABCMeta, abstractmethod
 from multiprocessing import Queue, Process
-from typing import Tuple, List, Sequence
+from pathlib import Path
+from typing import Tuple, List, Sequence, Any
 import time
 
 import matplotlib.pyplot as plt
@@ -224,6 +225,7 @@ class OSGeneticAlgorithm(GeneticAlgorithm):
                                        + self.population_size) / self.population_size
 
             if self.selection_pressure > self.max_selection_pressure:
+                print("Selection pressure too high. Stopping...")
                 self.stop_evolving = True
                 break
 
@@ -345,13 +347,14 @@ class ProgressPlot:
         self.data_queue = data_queue
         self.current_best_scores = []
         self.best_scores = []
+        self.generation = 0
 
         self.total_line, = self.axes[0].plot([], [], 'r-', animated=True, label="Total best")
         self.current_line, = self.axes[0].plot([], [], 'g.', animated=True, label="Generation best")
 
         # setup the animation
         self.animation = FuncAnimation(self.fig, self._update, init_func=self._init,
-                                       blit=True, interval=1000 // 6)
+                                       blit=True, interval=1000 // 20)
 
         self.legend = self.axes[0].legend()
 
@@ -361,17 +364,18 @@ class ProgressPlot:
     def _get_newest_data(self):
         while not self.data_queue.empty():
             current_best_score, best = self.data_queue.get()
-            self.current_best_scores.append(current_best_score)
-            self.best_scores.append(best.score)
+            self.current_best_scores.append((self.generation, current_best_score))
+            self.best_scores.append((self.generation, best.score))
             self.best = best
+            self.generation += 1
             self.stale = True
 
     def _init(self):
         self._get_newest_data()
 
         if len(self.best_scores) > 0:
-            x_max = min(self.max_generations - 1, int(len(self.current_best_scores) * 2 + 10))
-            y_max = max(self.best_scores) * 1.2
+            x_max = min(self.max_generations - 1, int(len(self.best_scores) * 2 + 10))
+            y_max = self.best.score * 1.2
         else:
             x_max = 100
             y_max = 1e-5
@@ -395,7 +399,7 @@ class ProgressPlot:
 
             # update range of x-axis
             _, x_max = ax.get_xlim()
-            if len(self.current_best_scores) + 1 > x_max * 0.95 and not x_max == self.max_generations - 1:
+            if len(self.best_scores) + 1 > x_max * 0.95 and not x_max == self.max_generations - 1:
                 ax.set_xlim(0, min(self.max_generations - 1, int(x_max * 2 + 10)))
                 ax.figure.canvas.draw()
 
@@ -405,8 +409,8 @@ class ProgressPlot:
                 ax.set_ylim(0, self.best.score * 1.3)
                 ax.figure.canvas.draw()
 
-            # self.current_line.set_data(range(len(current_best), current_best)
-            self.total_line.set_data(range(len(self.best_scores)), self.best_scores)
+            self.current_line.set_data(zip(*sorted(self.current_best_scores)))
+            self.total_line.set_data(zip(*sorted(self.best_scores)))
 
         return self.current_line, self.total_line, self.legend
 
@@ -451,8 +455,10 @@ class TSPPlot(ProgressPlot):
 
         ax = self.axes[1]
 
-        for line in self.path_lines:
-            del line
+        while self.path_lines:
+            # to completely get rid of the lines, this is necessary
+            # see https://stackoverflow.com/questions/4981815
+            self.path_lines.pop(0).remove()
 
         path = [self.problem.cities[idx] for idx in self.best.phenotype]
         self.path_lines = ax.plot([path[-1].x, path[0].x], [path[-1].y, path[0].y], "k-")
