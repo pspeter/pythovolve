@@ -1,10 +1,14 @@
 import random
 from abc import ABCMeta, abstractmethod
+from collections import namedtuple
 from typing import List, Tuple, Dict
 
 from sympy.parsing.sympy_parser import parse_expr
 
 from .individuals import Individual, PathIndividual, RealValueIndividual
+
+Point = namedtuple("Point", ["x", "y"])
+Area = namedtuple("Area", ["min", "max"])
 
 
 class City:
@@ -41,6 +45,21 @@ class TravellingSalesman(Problem):
     def __init__(self, cities: List[City], best_known: Individual = None):
         super().__init__(best_known)
         self.cities = cities
+
+    @property
+    def defined_area(self) -> Area:
+        margin = 0.1
+
+        x_range = min(self.cities, key=lambda c: c.x).x, max(self.cities, key=lambda c: c.x).x
+        y_range = min(self.cities, key=lambda c: c.y).y, max(self.cities, key=lambda c: c.y).y
+
+        span_x = x_range[1] - x_range[0]
+        span_y = y_range[1] - y_range[0]
+
+        min_point = Point(x_range[0] - span_x * margin, y_range[0] - span_y * margin)
+        max_point = Point(x_range[1] + span_x * margin, y_range[1] + span_y * margin)
+        area = Area(min_point, max_point)
+        return area
 
     @classmethod
     def create_random(cls, num_cities,

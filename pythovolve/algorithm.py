@@ -1,12 +1,14 @@
 import random
 from abc import ABCMeta, abstractmethod
 from multiprocessing import Queue, Process
-from typing import Tuple, List
+from typing import Tuple, List, Sequence
 import time
 
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import seaborn as sns
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
 from pythovolve.callbacks import Callback
 from pythovolve.problems import Problem, TravellingSalesman, MultiDimFunction, sphere_problem, goldstein_price_problem, \
@@ -22,7 +24,7 @@ class EvolutionAlgorithm(metaclass=ABCMeta):
     def __init__(self, problem: Problem,
                  population_size: int = 100,
                  max_generations: int = 1000,
-                 callbacks: List[Callback] = None,
+                 callbacks: Sequence[Callback] = None,
                  plot_progress: bool = False):
         self.best: Individual = None
         self.current_best: Individual = None
@@ -42,7 +44,6 @@ class EvolutionAlgorithm(metaclass=ABCMeta):
 
         self.best_scores = []
         self.current_best_scores = []
-        self.generations = []
         self.callbacks = callbacks or []
 
         # Note: interactive plotting has only been tested with backend TkAgg and
@@ -72,14 +73,13 @@ class EvolutionAlgorithm(metaclass=ABCMeta):
 
         self.stop_evolving = False
         if self.plot_progress:
-            data_queue = Queue()
-            plot_process = Process(target=ProgressPlot, args=(self.max_generations, data_queue))
+            data_queue, plot_process = self._start_plot_process()
             try:
                 plot_process.start()
                 time.sleep(2)  # wait for figure to open
                 while not self.stop_evolving:
                     self.evolve_once()
-                    data_queue.put((self.generations, self.current_best_scores, self.best_scores))
+                    data_queue.put((self.current_best_scores, self.best_scores, self.best))
             finally:
                 plot_process.join()
 
@@ -94,6 +94,16 @@ class EvolutionAlgorithm(metaclass=ABCMeta):
     def evolve_once(self) -> None:
         pass
 
+    def _start_plot_process(self) -> Tuple[Queue, Process]:
+        if isinstance(self.problem, TravellingSalesman):
+            data_queue = Queue()
+            plot_process = Process(target=TSPPlot, args=(self.max_generations, self.problem, data_queue))
+        else:
+            data_queue = Queue()
+            plot_process = Process(target=ProgressPlot, args=(self.max_generations, data_queue))
+            return data_queue, plot_process
+        return data_queue, plot_process
+
 
 class GeneticAlgorithm(EvolutionAlgorithm):
     """Genetic Algorithm (GA) implementation.
@@ -104,19 +114,17 @@ class GeneticAlgorithm(EvolutionAlgorithm):
     :param mutator: Callable that mutates an individual
     :param population_size: The 'mu' parameter. Number of parents for each generation
     :param num_elites: How many of the best individuals should be kept for the next generation
-    :param use_offspring_selection: Wether to use offspring selection (OS) as described by
-        Affenzeller M., Wagner S. (2005)
     :param max_generations: Stops after that many generations
     :param callbacks: Optional callbacks
     :param plot_progress: Wether to plot the progress while running. This has only been
         tested with the matplotlib backend "TkAgg" and is not garantueed to work with others.
     """
+
     def __init__(self, problem: Problem, selector: Selector,
                  crossover: Crossover, mutator: Mutator,
                  population_size: int = 100, num_elites: int = 0,
-                 use_offspring_selection: bool = False,
                  max_generations: int = 1000,
-                 callbacks: List[Callback] = None,
+                 callbacks: Sequence[Callback] = None,
                  plot_progress: bool = False):
         super().__init__(problem, population_size, max_generations, callbacks, plot_progress)
         self.selector = selector
@@ -124,7 +132,6 @@ class GeneticAlgorithm(EvolutionAlgorithm):
         self.mutator = mutator
 
         self.num_elites = num_elites
-        self.use_offspring_selection = use_offspring_selection  # todo
 
     def evolve_once(self) -> None:
         for callback in self.callbacks:
@@ -135,9 +142,8 @@ class GeneticAlgorithm(EvolutionAlgorithm):
         children = self._generate_children()
 
         # we don't want to mutate our elites, only the children
-        self.population = [self.mutator(child, 0.5) for child in children] + elites
+        self.population = [self.mutator(child) for child in children] + elites
 
-        self.generations.append(self.generation)
         self.best_scores.append(self.best.score)
         self.current_best_scores.append(self.current_best.score)
 
@@ -165,7 +171,7 @@ class GeneticAlgorithm(EvolutionAlgorithm):
             father, mother = self.selector(self.population), self.selector(self.population)
             children += self.crossover(father, mother)
 
-        # in case the above range() was rounded down, add one more child
+        # in case population_size is not an even number, add one more child
         if len(children) < self.population_size:
             father, mother = self.selector(self.population), self.selector(self.population)
             children += self.crossover(father, mother)[:1]
@@ -189,13 +195,14 @@ class EvolutionStrategy(EvolutionAlgorithm):
     :param plot_progress: Wether to plot the progress while running. This has only been
         tested with the matplotlib backend "TkAgg" and is not garantueed to work with others.
     """
+
     def __init__(self, problem: Problem, selector: Selector,
                  mutator: Mutator,
                  population_size: int = 100, num_children: int = 10,
                  sigma_start: float = 1., keep_parents: bool = False,
                  sigma_multiplier: float = 1.15,
                  max_generations: int = 1000,
-                 callbacks: List[Callback] = None,
+                 callbacks: Sequence[Callback] = None,
                  plot_progress: bool = False):
 
         if num_children > population_size:
@@ -222,7 +229,6 @@ class EvolutionStrategy(EvolutionAlgorithm):
 
         self._adapt_sigma(num_success)
 
-        self.generations.append(self.generation)
         self.best_scores.append(self.best.score)
         self.current_best_scores.append(self.current_best.score)
         self.generation += 1
@@ -235,7 +241,7 @@ class EvolutionStrategy(EvolutionAlgorithm):
 
     def _adapt_sigma(self, num_success: int):
         """Sigma adaption as suggested by Schwefel (1981)"""
-        if num_success > 1/5 * self.num_children:
+        if num_success > 1 / 5 * self.num_children:
             self.sigma *= self.sigma_multiplier
         else:
             self.sigma /= self.sigma_multiplier
@@ -257,38 +263,58 @@ class EvolutionStrategy(EvolutionAlgorithm):
 
 
 class ProgressPlot:
-    def __init__(self, max_generations: int, data_queue: Queue):
+    def __init__(self, max_generations: int, data_queue: Queue, fig: Figure = None,
+                 axes: Sequence[Axes] = None):
         self.max_generations = max_generations
+        # set to True if there's new data to plot, set to false after it has been plotted
+        self.stale = False
+
+        if fig is not None and axes is not None:
+            self.fig = fig
+            self.axes = axes
+        else:
+            self.fig, axes = plt.subplots()
+            self.axes = [axes]
+
         self.data_queue = data_queue
         self.data = None
 
-        # set up the plot
-        sns.set()
-        self.fig, self.ax = plt.subplots()
-        self.total_line, = plt.plot([], [], 'r-', animated=True, label="Total best")
-        self.current_line, = plt.plot([], [], 'g*', animated=True, label="Generation best")
+        self.total_line, = self.axes[0].plot([], [], 'r-', animated=True, label="Total best")
+        self.current_line, = self.axes[0].plot([], [], 'g.', animated=True, label="Generation best")
 
         # setup the animation
         self.animation = FuncAnimation(self.fig, self._update, init_func=self._init,
-                                       blit=True, interval=1000 // 24)
+                                       blit=True, interval=1000 // 6)
 
-        self.legend = plt.legend()
+        self.legend = self.axes[0].legend()
+
+        sns.set()
         plt.show()
 
-    def _init(self):  # todo fix redraw when queue is empty
+    def _get_newest_data(self):
+        while not self.data_queue.empty():
+            self.data = self.data_queue.get()
+            self.stale = True
+
+    def _init(self):
         self._get_newest_data()
+
         if self.data:
-            x_values, current_best, total_best = self.data
-            x_max = min(self.max_generations - 1, int(len(x_values) * 2 + 10))
+            current_best, total_best, _ = self.data
+            x_max = min(self.max_generations - 1, int(len(current_best) * 2 + 10))
             y_max = max(total_best) * 1.2
         else:
             x_max = 100
             y_max = 1e-5
 
-        self.ax.set_xlim(0, x_max)
-        self.ax.set_ylim(0, y_max)
-        self.ax.set_xlabel("Generation")
-        self.ax.set_ylabel("Score")
+        ax = self.axes[0]
+        ax.set_title("Progress")
+        ax.set_xlim(0, x_max)
+        ax.set_ylim(0, y_max)
+        ax.set_xlabel("Generation")
+        ax.set_ylabel("Score")
+
+        self.legend = ax.legend()
 
         return self.current_line, self.total_line, self.legend
 
@@ -296,60 +322,103 @@ class ProgressPlot:
         self._get_newest_data()
 
         if self.data:
-            x_values, current_best, total_best = self.data
+            ax = self.axes[0]
+            current_best, total_best, *_ = self.data
 
             # update range of x-axis
-            _, x_max = self.ax.get_xlim()
-            # if x_values[-1] + 1 >= x_max and not x_max == self.max_generations - 1:
-            #     self.ax.set_xlim(0, x_max + 1)
-            if x_values[-1] + 1 > x_max * 0.95 and not x_max == self.max_generations - 1:
-                self.ax.set_xlim(0, min(self.max_generations - 1, int(x_max * 2 + 10)))
-                self.ax.figure.canvas.draw()
+            _, x_max = ax.get_xlim()
+            if len(current_best) + 1 > x_max * 0.95 and not x_max == self.max_generations - 1:
+                ax.set_xlim(0, min(self.max_generations - 1, int(x_max * 2 + 10)))
+                ax.figure.canvas.draw()
 
             # update range of y-axis
-            _, y_max = self.ax.get_ylim()
+            _, y_max = ax.get_ylim()
             if max(total_best) > y_max * 0.95:
-                self.ax.set_ylim(0, max(total_best) * 1.3)
-                self.ax.figure.canvas.draw()
+                ax.set_ylim(0, max(total_best) * 1.3)
+                ax.figure.canvas.draw()
 
-            self.current_line.set_data(x_values, current_best)
-            self.total_line.set_data(x_values, total_best)
+            #self.current_line.set_data(range(len(current_best), current_best)
+            self.total_line.set_data(range(len(current_best)), total_best)
 
         return self.current_line, self.total_line, self.legend
 
-    def _get_newest_data(self):
-        # get newest result
-        while not self.data_queue.empty():
-            self.data = self.data_queue.get()
+
+class TSPPlot(ProgressPlot):
+    def __init__(self, max_generations: int, problem: TravellingSalesman, data_queue: Queue):
+        self.problem = problem
+        self.path_lines = []
+        self.city_points = []
+
+        fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+        super().__init__(max_generations, data_queue, fig, axes)
+
+    def _init(self):
+        super()._init()
+        ax = self.axes[1]
+        area = self.problem.defined_area
+
+        ax.set_title("Path")
+        ax.set_xlim(area.min.x, area.max.x)
+        ax.set_ylim(area.min.y, area.max.y)
+
+        for point in self.city_points:
+            del point
+
+        x_cities = [city.x for city in self.problem.cities]
+        y_cities = [city.y for city in self.problem.cities]
+        self.city_points = ax.plot(x_cities, y_cities, ls="", marker="*", label="Cities")
+
+        self._plot_paths()
+
+        return (self.current_line, self.total_line, self.legend, *self.path_lines)
+
+    def _update(self, frame):
+        super()._update(frame)
+        self._plot_paths()
+        return (self.current_line, self.total_line, self.legend, *self.path_lines)
+
+    def _plot_paths(self):
+        if not self.data or not self.stale:
+            return
+
+        ax = self.axes[1]
+
+        for line in self.path_lines:
+            del line
+
+        best = self.data[2]
+        path = [self.problem.cities[idx] for idx in best.phenotype]
+        self.path_lines = ax.plot([path[-1].x, path[0].x], [path[-1].y, path[0].y], "k-")
+
+        for start, dest in zip(path, path[1:]):
+            self.path_lines += ax.plot([dest.x, start.x], [dest.y, start.y], "k-")
 
 
 if __name__ == "__main__":
     random.seed(123)
-    prob = goldstein_price_problem
-    print("Problem:", prob.expression)
-    print("Best known so far:", prob.best_known)
-    mut = RealValueMutator(1)
-    cx = single_point_crossover
-    sel = multi_selector
+    # prob = goldstein_price_problem
+    # print("Problem:", prob.expression)
+    # print("Best known so far:", prob.best_known)
+    # mut = RealValueMutator(1)
+    # cx = single_point_crossover
+    # sel = multi_selector
 
-    es = EvolutionStrategy(prob, sel, mut, sigma_start=0.5,
-                           keep_parents=False, max_generations=100, plot_progress=True)
-    es.evolve()
-    print("best:", es.best)
+    # es = EvolutionStrategy(prob, sel, mut, sigma_start=0.5,
+    #                        keep_parents=False, max_generations=500, plot_progress=True)
+    # es.evolve()
+    # print("best:", es.best)
 
     # ga = GeneticAlgorithm(prob, sel, cx, mut, 100, 3, max_generations=100, plot_progress=True)
     # ga.evolve()
     # print("best:", ga.best)
 
-    # n_cities = 130
-    # tsp = TravellingSalesman.create_random(n_cities)
-    # mut = multi_path_mutator
-    # cx = multi_crossover
-    # sel = multi_selector
-    # import time
-    #
-    # start = time.time()
-    # ga = GeneticAlgorithm(tsp, sel, cx, mut, 100, 20, max_generations=2500, plot_progress=True)
-    # ga.evolve()
-    # print("time: ", time.time() - start)
-    # print("best found: ", tsp.best_known.score)
+    n_cities = 130
+    tsp = TravellingSalesman.create_random(n_cities)
+    mut = multi_path_mutator
+    cx = multi_crossover
+    sel = multi_selector
+    import time
+
+    ga = GeneticAlgorithm(tsp, sel, cx, mut, 100, 1, max_generations=20000, plot_progress=True)
+    ga.evolve()
+    print("best found: ", ga.best)
