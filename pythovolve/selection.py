@@ -25,7 +25,7 @@ class LinearRankSelector(Selector):
         super().__init__()
 
     def __call__(self, population: Sequence[Individual]) -> Individual:
-        population = sorted(population, key=lambda ind: ind.score, reverse=True)
+        population = sorted(population, reverse=True)
         ranks = range(1, len(population) + 1)
         sum_ranks = sum(ranks)
         weights = [i / sum_ranks for i in ranks]

@@ -23,9 +23,12 @@ class Individual:
     def score(self, score: float) -> None:
         self._score = score
 
+    def clone(self):
+        raise NotImplementedError(f"Subclass '{type(self).__name__}' has not implemented this method")
+
     @classmethod
     def create_random(cls, *args):
-        raise NotImplementedError(f"Derived class '{cls}' has not implemented this method")
+        raise NotImplementedError(f"Subclass '{cls.__name__}' has not implemented this method")
 
     def __repr__(self):
         return f"{type(self).__name__}({self.phenotype})"
@@ -51,6 +54,9 @@ class BinaryIndividual(Individual):
     def __init__(self, phenotype: List[bool]):
         super().__init__(phenotype)
 
+    def clone(self):
+        return type(self)(self.phenotype[:])
+
     @classmethod
     def create_random(cls, size: int):
         return cls([random.choice([True, False] for _ in range(size))])
@@ -62,6 +68,9 @@ class BinaryIndividual(Individual):
 class PathIndividual(Individual):
     def __init__(self, phenotype: List[int]):
         super().__init__(phenotype)
+
+    def clone(self):
+        return type(self)(self.phenotype[:])
 
     @classmethod
     def create_random(cls, size: int):
@@ -75,6 +84,9 @@ class RealValueIndividual(Individual):
     def __init__(self, phenotype: List[float], value_range: Tuple[float, float] = (-1, 1)):
         super().__init__(phenotype)
         self.value_range = value_range
+
+    def clone(self):
+        return type(self)(self.phenotype[:], self.value_range)
 
     @classmethod
     def create_random(cls, size: int, value_range: Tuple[float, float] = (-1, 1)):
