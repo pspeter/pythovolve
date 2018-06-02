@@ -11,7 +11,7 @@ from pythovolve.problems import Problem, TravellingSalesman
 from pythovolve.individuals import Individual, PathIndividual
 from pythovolve.crossover import Crossover, CycleCrossover, order_crossover, cycle_crossover, multi_crossover
 from pythovolve.selection import Selector, ProportionalSelector, TournamentSelector, LinearRankSelector, multi_selector
-from pythovolve.mutation import Mutator, InversionMutator, multi_mutator
+from pythovolve.mutation import Mutator, InversionMutator, multi_path_mutator
 
 
 class GeneticAlgorithm:
@@ -198,13 +198,13 @@ if __name__ == "__main__":
     random.seed(123)
     n_cities = 130
     tsp = TravellingSalesman.create_random(n_cities)
-    mut = multi_mutator
+    mut = multi_path_mutator
     cx = multi_crossover
     sel = multi_selector
     import time
 
     start = time.time()
-    ga = GeneticAlgorithm(tsp, 300, sel, cx, mut, 20, max_generations=2500, plot_progress=True)
+    ga = GeneticAlgorithm(tsp, sel, cx, mut, 100, 20, max_generations=2500, plot_progress=True)
     ga.evolve()
     print("time: ", time.time() - start)
     print("best found: ", tsp.best_known.score)

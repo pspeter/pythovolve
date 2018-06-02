@@ -2,21 +2,17 @@ import random
 from abc import ABCMeta, abstractmethod
 from typing import Sequence
 
-from pythovolve.individuals import Individual, BinaryIndividual, PathIndividual
+from pythovolve.individuals import Individual, BinaryIndividual, PathIndividual, RealValueIndividual
 
 
 class Mutator(metaclass=ABCMeta):
-    def __init__(self, probability: float = 0.1):
-        self.probability = probability
-
     @abstractmethod
-    def __call__(self, individual: Individual) -> Individual:
+    def __call__(self, *args) -> Individual:
         pass
-
 
 class BitFlipMutator(Mutator):
     def __init__(self, max_flips: int, probability: float = 0.1):
-        super().__init__(probability)
+        self.probability = probability
         self.max_flips = max_flips
 
     def __call__(self, individual: BinaryIndividual) -> BinaryIndividual:
@@ -33,10 +29,16 @@ class BitFlipMutator(Mutator):
         return individual
 
 
-class InversionMutator(Mutator):
+class PathMutator(Mutator, metaclass=ABCMeta):
     def __init__(self, probability: float = 0.1):
-        super().__init__(probability)
+        self.probability = probability
 
+    @abstractmethod
+    def __call__(self, individual: PathIndividual) -> PathIndividual:
+        pass
+
+
+class InversionMutator(PathMutator):
     def __call__(self, individual: PathIndividual) -> PathIndividual:
         if random.random() > self.probability:
             return individual
@@ -47,7 +49,7 @@ class InversionMutator(Mutator):
         return individual
 
 
-class TranslocationMutator(Mutator):
+class TranslocationMutator(PathMutator):
     def __call__(self, individual: PathIndividual) -> PathIndividual:
         if random.random() > self.probability:
             return individual
@@ -59,17 +61,36 @@ class TranslocationMutator(Mutator):
         return individual
 
 
-class MultiMutator(Mutator):
-    def __init__(self, mutators: Sequence[Mutator], weights: Sequence[float] = None):
-        super().__init__()
+class MultiPathMutator(PathMutator):
+    def __init__(self, mutators: Sequence[PathMutator], weights: Sequence[float] = None):
+        super().__init__(1)
         self.mutators = mutators
         self.weights = weights
 
-    def __call__(self, population: Sequence[Individual]) -> Individual:
+    def __call__(self, individual: PathIndividual) -> PathIndividual:
         mutator = random.choices(self.mutators, self.weights, k=1)[0]
-        return mutator(population)
+        return mutator(individual)
 
 
-inversion_mutator = InversionMutator(0.2)
-translocation_mutator = TranslocationMutator(0.2)
-multi_mutator = MultiMutator((inversion_mutator, translocation_mutator))
+class RealValueMutator(Mutator):
+    def __init__(self, probability: float = 0.1):
+        self.probability = probability
+
+    def __call__(self, individual: RealValueIndividual, sigma: float) -> RealValueIndividual:
+        if random.random() > self.probability:
+            return individual
+
+        vector = individual.phenotype
+        min_val, max_val = individual.value_range
+
+        for i in range(len(vector)):
+            vector[i] += sigma * random.uniform(-1, 1)
+            vector[i] = max(min_val, min(max_val, vector[i]))
+
+        return individual
+
+
+inversion_mutator = InversionMutator()
+translocation_mutator = TranslocationMutator()
+multi_path_mutator = MultiPathMutator((inversion_mutator, translocation_mutator))
+real_value_mutator = RealValueMutator()
