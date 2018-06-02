@@ -2,7 +2,7 @@ import random
 from abc import ABCMeta, abstractmethod
 from typing import Tuple, Sequence
 
-from pythovolve.individuals import Individual, PathIndividual
+from pythovolve.individuals import Individual, PathIndividual, RealValueIndividual
 
 
 class Crossover(metaclass=ABCMeta):
@@ -68,9 +68,19 @@ class MultiCrossover(Crossover):
         return crossover(mother, father)
 
 
+class SinglePointCrossover(Crossover):
+    def __call__(self, mother: RealValueIndividual, father: RealValueIndividual) \
+            -> Tuple[RealValueIndividual, RealValueIndividual]:
+        start, = random.sample(range(len(mother.phenotype)), k=1)
+        child1 = mother.phenotype[:start] + father.phenotype[start:]
+        child2 = father.phenotype[:start] + mother.phenotype[start:]
+        return RealValueIndividual(child1, mother.value_range), RealValueIndividual(child2, mother.value_range)
+
+
 cycle_crossover = CycleCrossover()
 order_crossover = OrderCrossover()
 multi_crossover = MultiCrossover((cycle_crossover, order_crossover))
+single_point_crossover = SinglePointCrossover()
 
 
 
