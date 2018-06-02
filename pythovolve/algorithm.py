@@ -1,4 +1,5 @@
 import random
+from abc import ABCMeta, abstractmethod
 from multiprocessing import Queue, Process
 from typing import Tuple, List
 import time
@@ -17,15 +18,12 @@ from pythovolve.selection import Selector, ProportionalSelector, TournamentSelec
 from pythovolve.mutation import Mutator, InversionMutator, multi_path_mutator, real_value_mutator
 
 
-class GeneticAlgorithm:
-    def __init__(self, problem: Problem, selector: Selector,
-                 crossover: Crossover, mutator: Mutator,
-                 population_size: int = 100, num_elites: int = 0,
-                 use_offspring_selection: bool = False,
+class EvolutionAlgorithm(metaclass=ABCMeta):
+    def __init__(self, problem: Problem,
+                 population_size: int = 100,
                  max_generations: int = 1000,
                  callbacks: List[Callback] = None,
                  plot_progress: bool = False):
-        self._population: List[Individual] = None
         self.best: Individual = None
         self.current_best: Individual = None
 
@@ -33,18 +31,14 @@ class GeneticAlgorithm:
         self.generation = 0
 
         self.problem = problem
-        self.selector = selector
-        self.crossover = crossover
-        self.mutator = mutator
         self.max_generations = max_generations
         self.population_size = population_size
 
         if self.population_size == 0:
             raise ValueError("Initial population is empty")
 
+        self._population = None
         self.population = [self.problem.create_individual() for _ in range(300)]
-        self.num_elites = num_elites
-        self.use_offspring_selection = use_offspring_selection  # todo
 
         self.best_scores = []
         self.current_best_scores = []
@@ -82,7 +76,7 @@ class GeneticAlgorithm:
             plot_process = Process(target=ProgressPlot, args=(self.max_generations, data_queue))
             try:
                 plot_process.start()
-                time.sleep(1)  # wait for figure to open
+                time.sleep(2)  # wait for figure to open
                 while not self.stop_evolving:
                     self.evolve_once()
                     data_queue.put((self.generations, self.current_best_scores, self.best_scores))
@@ -95,6 +89,27 @@ class GeneticAlgorithm:
 
         for callback in self.callbacks:
             callback.on_train_end()
+
+    @abstractmethod
+    def evolve_once(self) -> None:
+        pass
+
+
+class GeneticAlgorithm(EvolutionAlgorithm):
+    def __init__(self, problem: Problem, selector: Selector,
+                 crossover: Crossover, mutator: Mutator,
+                 population_size: int = 100, num_elites: int = 0,
+                 use_offspring_selection: bool = False,
+                 max_generations: int = 1000,
+                 callbacks: List[Callback] = None,
+                 plot_progress: bool = False):
+        super().__init__(problem, population_size, max_generations, callbacks, plot_progress)
+        self.selector = selector
+        self.crossover = crossover
+        self.mutator = mutator
+
+        self.num_elites = num_elites
+        self.use_offspring_selection = use_offspring_selection  # todo
 
     def evolve_once(self) -> None:
         for callback in self.callbacks:
@@ -199,13 +214,13 @@ class ProgressPlot:
 
 if __name__ == "__main__":
     random.seed(123)
-    problem = booth_problem
-    print("Problem:", problem.expression)
-    print("Best known so far:", problem.best_known)
+    prob = booth_problem
+    print("Problem:", prob.expression)
+    print("Best known so far:", prob.best_known)
     mut = real_value_mutator
     cx = single_point_crossover
     sel = multi_selector
-    ga = GeneticAlgorithm(problem, sel, cx, mut, 100, 0, max_generations=100, plot_progress=True)
+    ga = GeneticAlgorithm(prob, sel, cx, mut, 100, 0, max_generations=100, plot_progress=True)
     ga.evolve()
     print("best:", ga.best)
 
