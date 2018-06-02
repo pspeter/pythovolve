@@ -1,6 +1,7 @@
 import random
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
+from pathlib import Path
 from typing import List, Tuple, Dict
 
 from sympy.parsing.sympy_parser import parse_expr
@@ -67,6 +68,22 @@ class TravellingSalesman(Problem):
                       y_range: Tuple[float, float] = (0, 100)):
         cities = [City.create_random(x_range, y_range) for _ in range(num_cities)]
         return cls(cities)
+
+    @classmethod
+    def from_file(cls, file_path: Path, best_known: float = None):
+        cities = []
+        with file_path.open() as fp:
+            line = fp.readline()
+            while line != "NODE_COORD_SECTION\n":
+                line = fp.readline()
+
+            line = fp.readline()
+            while line != "EOF\n":
+                _, x, y = line.split()
+                cities.append(City(float(x), float(y)))
+                line = fp.readline()
+
+        return cls(cities, best_known)
 
     def create_individual(self, individual_type: str = "path") -> Individual:
         if individual_type in self.valid_individuals:
