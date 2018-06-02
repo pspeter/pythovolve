@@ -9,17 +9,17 @@ import seaborn as sns
 from pythovolve.callbacks import Callback
 from pythovolve.problems import Problem, TravellingSalesman
 from pythovolve.individuals import Individual, PathIndividual
-from pythovolve.crossover import Crossover, CycleCrossover, order_crossover, cycle_crossover
+from pythovolve.crossover import Crossover, CycleCrossover, order_crossover, cycle_crossover, multi_crossover
 from pythovolve.selection import Selector, ProportionalSelector, TournamentSelector, LinearRankSelector, multi_selector
-from pythovolve.mutation import Mutator, InversionMutator
+from pythovolve.mutation import Mutator, InversionMutator, multi_mutator
 
 
 class GeneticAlgorithm:
-    def __init__(self, problem: Problem, population: List[Individual],
-                 selector: Selector, crossover: Crossover,
-                 mutator: Mutator, num_elites: int = 0,
+    def __init__(self, problem: Problem, selector: Selector,
+                 crossover: Crossover, mutator: Mutator,
+                 population_size: int = 100, num_elites: int = 0,
                  use_offspring_selection: bool = False,
-                 max_generations=1000,
+                 max_generations: int = 1000,
                  callbacks: List[Callback] = None,
                  plot_progress: bool = False):
         self._population: List[Individual] = None
@@ -33,13 +33,13 @@ class GeneticAlgorithm:
         self.selector = selector
         self.crossover = crossover
         self.mutator = mutator
-        self.population_size = len(population)
         self.max_generations = max_generations
+        self.population_size = population_size
 
         if self.population_size == 0:
             raise ValueError("Initial population is empty")
 
-        self.population = population
+        self.population = [self.problem.create_individual("path") for _ in range(300)]
         self.num_elites = num_elites
         self.use_offspring_selection = use_offspring_selection  # todo
 
@@ -196,21 +196,15 @@ class ProgressPlot:
 
 if __name__ == "__main__":
     random.seed(123)
-    n_cities = 100
+    n_cities = 130
     tsp = TravellingSalesman.create_random(n_cities)
-    mut = InversionMutator(0.15)
-    cx = order_crossover
+    mut = multi_mutator
+    cx = multi_crossover
     sel = multi_selector
-    pop = [PathIndividual.create_random(n_cities) for _ in range(100)]
     import time
 
     start = time.time()
-    ga = GeneticAlgorithm(tsp, pop, sel, cx, mut, 0, max_generations=500, plot_progress=True)
+    ga = GeneticAlgorithm(tsp, 300, sel, cx, mut, 20, max_generations=2500, plot_progress=True)
     ga.evolve()
     print("time: ", time.time() - start)
     print("best found: ", tsp.best_known.score)
-
-    # OX 0.0014488670397757417
-    # CX 0.001345505179329658
-
-

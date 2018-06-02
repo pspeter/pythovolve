@@ -1,6 +1,6 @@
 import random
 from abc import ABCMeta, abstractmethod
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 from .individuals import Individual, PathIndividual
 
@@ -13,6 +13,7 @@ class City:
     def distance(self, destination) -> float:
         return (abs(self.x - destination.x) ** 2 + abs(self.y - destination.y) ** 2) ** 0.5
 
+
     @staticmethod
     def create_random(x_range: Tuple[float, float], y_range: Tuple[float, float]):
         return City(random.uniform(*x_range), random.uniform(*y_range))
@@ -23,8 +24,14 @@ class Problem(metaclass=ABCMeta):
     def score_individual(self, individual: Individual) -> float:
         pass
 
+    @abstractmethod
+    def create_individual(self, individual_type: str = "path") -> Individual:
+        pass
+
 
 class TravellingSalesman(Problem):
+    valid_individuals: Dict[str, Individual] = {"path": PathIndividual}
+
     def __init__(self, cities: List[City], best_known: Individual = None):
         self.cities = cities
         self.best_known = best_known
@@ -35,6 +42,11 @@ class TravellingSalesman(Problem):
                       y_range: Tuple[float, float] = (0, 100)):
         cities = [City.create_random(x_range, y_range) for _ in range(num_cities)]
         return cls(cities)
+
+    def create_individual(self, individual_type: str = "path") -> Individual:
+        if individual_type in self.valid_individuals:
+            return self.valid_individuals[individual_type].create_random(len(self.cities))
+        raise ValueError(f"Type {individual_type} not supported. Expected one of {self.valid_individuals}")
 
     def score_individual(self, individual: Individual) -> None:
         super().score_individual(individual)
