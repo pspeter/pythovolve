@@ -15,7 +15,7 @@ class Individual:
     def score(self) -> float:
         """*Smaller* score is always *better*. Score should
             not be smaller or equal to 0."""
-        if not self._score:
+        if self._score is None:
             raise ValueError("Individual has not been scored yet")
         return self._score
 
@@ -68,7 +68,7 @@ class PathIndividual(Individual):
         return cls(random.sample(range(size), size))
 
     def __str__(self):
-        return "[" + " -> ".join((str(city) for city in self.phenotype)) + "]"
+        return "Path[" + " -> ".join((str(city) for city in self.phenotype)) + "]"
 
 
 class RealValueIndividual(Individual):
@@ -78,7 +78,7 @@ class RealValueIndividual(Individual):
 
     @classmethod
     def create_random(cls, size: int, value_range: Tuple[float, float] = (-1, 1)):
-        return cls([random.uniform(*value_range) for _ in range(size)])
+        return cls([random.uniform(*value_range) for _ in range(size)], value_range)
 
     def __str__(self):
-        return "[" + " -> ".join((f"{value:.3f}" for value in self.phenotype)) + "]"
+        return f"{type(self).__name__}({str(self.phenotype)}) with score {self.score}"

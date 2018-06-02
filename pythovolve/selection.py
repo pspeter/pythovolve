@@ -16,7 +16,7 @@ class ProportionalSelector(Selector):
         super().__init__()
 
     def __call__(self, population: Sequence[Individual]) -> Individual:
-        weights = [indiv.score for indiv in population]
+        weights = [1/indiv.score for indiv in population]
         return random.choices(population, weights, k=1)[0]
 
 
@@ -25,7 +25,7 @@ class LinearRankSelector(Selector):
         super().__init__()
 
     def __call__(self, population: Sequence[Individual]) -> Individual:
-        population = sorted(population, key=lambda ind: ind.score)
+        population = sorted(population, key=lambda ind: ind.score, reverse=True)
         ranks = range(1, len(population) + 1)
         sum_ranks = sum(ranks)
         weights = [i / sum_ranks for i in ranks]
@@ -38,7 +38,7 @@ class TournamentSelector(Selector):
 
     def __call__(self, population: Sequence[Individual], tournament_size=5) -> Individual:
         chosen = random.choices(population, k=tournament_size)
-        return max(chosen, key=lambda ind: ind.score)
+        return min(chosen, key=lambda ind: ind.score)
 
 
 class MultiSelector(Selector):

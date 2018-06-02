@@ -22,14 +22,16 @@ class City:
 
 class Problem(metaclass=ABCMeta):
     def __init__(self, best_known: Individual = None):
-        self.best_known = best_known
+        self.best_known = None
+        if best_known:
+            self.score_individual(best_known)
 
     @abstractmethod
     def score_individual(self, individual: Individual) -> None:
         pass
 
     @abstractmethod
-    def create_individual(self, individual_type: str = "path") -> Individual:
+    def create_individual(self) -> Individual:
         pass
 
 
@@ -57,18 +59,18 @@ class TravellingSalesman(Problem):
 
         if isinstance(individual, PathIndividual):
             path = [self.cities[idx] for idx in individual.phenotype]
-            total_distance = path[-1].distance(path[0])
+            score = path[-1].distance(path[0])
 
             for start, dest in zip(path, path[1:]):
-                total_distance += start.distance(dest)
+                score += start.distance(dest)
 
-            score = 1 / total_distance
             individual.score = score
 
-            if not self.best_known or individual > self.best_known:
+            if not self.best_known or individual < self.best_known:
                 self.best_known = individual
         else:
-            raise ValueError(f"Individuals of type {type(individual)} are not supported by {type(TravellingSalesman)}")
+            raise ValueError(f"Individuals of type {type(individual).__name__} "
+                             f"are not supported by {type(self).__name__}")
 
     def __repr__(self):
         return f"{type(self).__name__}(num_cities={len(self.cities)})"
@@ -80,12 +82,12 @@ class MultiDimFunction(Problem):
     def __init__(self, expression: str, vector_length: int,
                  search_domain: Tuple[float, float] = (-1, 1),
                  best_known: Individual = None):
-        super().__init__(best_known)
         self.expression = expression
         self.vector_length = vector_length
         self.search_domain = search_domain
+        super().__init__(best_known)
 
-    def create_individual(self, individual_type: str = "path") -> Individual:
+    def create_individual(self, individual_type: str = "real") -> Individual:
         if individual_type in self.valid_individuals:
             ind = self.valid_individuals[individual_type]
             return ind.create_random(self.vector_length, self.search_domain)
@@ -96,12 +98,13 @@ class MultiDimFunction(Problem):
         if isinstance(individual, RealValueIndividual):
             super().score_individual(individual)
 
-            individual.score = parse_expr(self.expression, {"x": individual.phenotype})
+            individual.score = float(parse_expr(self.expression, {"x": individual.phenotype}))
 
-            if not self.best_known or individual > self.best_known:
+            if not self.best_known or individual < self.best_known:
                 self.best_known = individual
         else:
-            raise ValueError(f"Individuals of type {type(individual)} are not supported by {type(TravellingSalesman)}")
+            raise ValueError(f"Individuals of type {type(individual).__name__} "
+                             f"are not supported by {type(self).__name__}")
 
     def __repr__(self):
         return f"{type(self).__name__}(expression={self.expression})"

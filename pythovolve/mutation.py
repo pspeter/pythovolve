@@ -76,12 +76,15 @@ class RealValueMutator(Mutator):
     def __init__(self, probability: float = 0.1):
         self.probability = probability
 
-    def __call__(self, individual: RealValueIndividual, sigma: float) -> RealValueIndividual:
+    def __call__(self, individual: RealValueIndividual, sigma: float = None) -> RealValueIndividual:
         if random.random() > self.probability:
             return individual
 
         vector = individual.phenotype
         min_val, max_val = individual.value_range
+
+        if sigma is None:
+            sigma = (max_val - min_val) / 5  # GA uses 1/5 of range as sigma todo better way?
 
         for i in range(len(vector)):
             vector[i] += sigma * random.uniform(-1, 1)

@@ -1,17 +1,20 @@
 import random
 from multiprocessing import Queue, Process
 from typing import Tuple, List
+import time
 
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import seaborn as sns
 
 from pythovolve.callbacks import Callback
-from pythovolve.problems import Problem, TravellingSalesman
+from pythovolve.problems import Problem, TravellingSalesman, MultiDimFunction, sphere_problem, goldstein_price_problem, \
+    booth_problem
 from pythovolve.individuals import Individual, PathIndividual
-from pythovolve.crossover import Crossover, CycleCrossover, order_crossover, cycle_crossover, multi_crossover
+from pythovolve.crossover import Crossover, CycleCrossover, order_crossover, cycle_crossover, multi_crossover, \
+    single_point_crossover
 from pythovolve.selection import Selector, ProportionalSelector, TournamentSelector, LinearRankSelector, multi_selector
-from pythovolve.mutation import Mutator, InversionMutator, multi_path_mutator
+from pythovolve.mutation import Mutator, InversionMutator, multi_path_mutator, real_value_mutator
 
 
 class GeneticAlgorithm:
@@ -39,7 +42,7 @@ class GeneticAlgorithm:
         if self.population_size == 0:
             raise ValueError("Initial population is empty")
 
-        self.population = [self.problem.create_individual("path") for _ in range(300)]
+        self.population = [self.problem.create_individual() for _ in range(300)]
         self.num_elites = num_elites
         self.use_offspring_selection = use_offspring_selection  # todo
 
@@ -63,9 +66,9 @@ class GeneticAlgorithm:
         for individual in self.population:
             self.problem.score_individual(individual)
 
-        self.current_best = sorted(self.population)[-1]
+        self.current_best = sorted(self.population)[0]
 
-        if not self.best or self.current_best > self.best:
+        if not self.best or self.current_best < self.best:
             print("new best:", self.current_best.score)
             self.best = self.current_best
 
@@ -106,14 +109,14 @@ class GeneticAlgorithm:
 
         # in case the above range() was rounded down, add one more child
         if len(children) < self.population_size:
-            children += self.crossover(self.selector(self.population), self.selector(self.population))[0]
+            father, mother = self.selector(self.population), self.selector(self.population)
+            children += self.crossover(father, mother)[:1]
 
         # we don't want to mutate our elites, only the children
-        self.population = [self.mutator(child) for child in children] + elites
-
+        self.population = [self.mutator(child, 0.5) for child in children] + elites
         self.generations.append(self.generation)
-        self.best_scores.append(1 / self.best.score)
-        self.current_best_scores.append(1 / self.current_best.score)
+        self.best_scores.append(self.best.score)
+        self.current_best_scores.append(self.current_best.score)
 
         self.generation += 1
         if self.generation >= self.max_generations:
@@ -130,7 +133,7 @@ class GeneticAlgorithm:
         if self.num_elites == 0:
             return [], population
         sorted_population = sorted(population)
-        return sorted_population[-self.num_elites:], sorted_population[:-self.num_elites]
+        return sorted_population[:self.num_elites], sorted_population[self.num_elites:]
 
 
 class ProgressPlot:
@@ -196,15 +199,25 @@ class ProgressPlot:
 
 if __name__ == "__main__":
     random.seed(123)
-    n_cities = 130
-    tsp = TravellingSalesman.create_random(n_cities)
-    mut = multi_path_mutator
-    cx = multi_crossover
+    problem = booth_problem
+    print("Problem:", problem.expression)
+    print("Best known so far:", problem.best_known)
+    mut = real_value_mutator
+    cx = single_point_crossover
     sel = multi_selector
-    import time
-
-    start = time.time()
-    ga = GeneticAlgorithm(tsp, sel, cx, mut, 100, 20, max_generations=2500, plot_progress=True)
+    ga = GeneticAlgorithm(problem, sel, cx, mut, 100, 0, max_generations=100, plot_progress=True)
     ga.evolve()
-    print("time: ", time.time() - start)
-    print("best found: ", tsp.best_known.score)
+    print("best:", ga.best)
+
+    # n_cities = 130
+    # tsp = TravellingSalesman.create_random(n_cities)
+    # mut = multi_path_mutator
+    # cx = multi_crossover
+    # sel = multi_selector
+    # import time
+    #
+    # start = time.time()
+    # ga = GeneticAlgorithm(tsp, sel, cx, mut, 100, 20, max_generations=2500, plot_progress=True)
+    # ga.evolve()
+    # print("time: ", time.time() - start)
+    # print("best found: ", tsp.best_known.score)
