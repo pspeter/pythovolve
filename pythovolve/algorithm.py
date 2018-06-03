@@ -375,15 +375,21 @@ class ProgressPlot:
 
         if len(self.best_scores) > 0:
             x_max = min(self.max_generations - 1, int(len(self.best_scores) * 2 + 10))
-            y_max = self.best.score * 1.2
+            max_score = max(score[1] for score in self.best_scores)
+            min_score = self.best.score
+            y_min = min_score - (max_score - min_score) * 0.3
+            y_max = max_score + (max_score - min_score) * 0.1
+            y_max = y_max if not y_min == y_max else y_min + 1
+
         else:
             x_max = 100
+            y_min = 0
             y_max = 1e-5
 
         ax = self.axes[0]
         ax.set_title("Progress")
         ax.set_xlim(0, x_max)
-        ax.set_ylim(0, y_max)
+        ax.set_ylim(y_min, y_max)
         ax.set_xlabel("Generation")
         ax.set_ylabel("Score")
 
@@ -405,13 +411,14 @@ class ProgressPlot:
 
             # update range of y-axis
             y_min, y_max = ax.get_ylim()
-            if self.best.score > y_max * 0.95:
-                ax.set_ylim(y_min, self.best.score * 1.3)
+            max_score = max(score[1] for score in self.best_scores)
+            min_score = self.best.score
+            if max_score > y_max or min_score < y_min:
+                new_min = min_score - (max_score - min_score) * 0.3
+                new_max = max_score + (max_score - min_score) * 0.1
+                new_max = new_max if not new_min == new_max else new_min + 1
+                ax.set_ylim(new_min, new_max)
                 ax.figure.canvas.draw()
-            elif self.best.score < y_max * 0.95:
-                ax.set_ylim(self.best.score * 1.3, y_max)
-                ax.figure.canvas.draw()
-
 
             self.current_line.set_data(zip(*sorted(self.current_best_scores)))
             self.total_line.set_data(zip(*sorted(self.best_scores)))
