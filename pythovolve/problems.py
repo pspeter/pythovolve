@@ -2,7 +2,7 @@ import random
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 from pathlib import Path
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Union
 
 from sympy.parsing.sympy_parser import parse_expr
 
@@ -39,6 +39,11 @@ class Problem(metaclass=ABCMeta):
     def create_individual(self) -> Individual:
         pass
 
+    @classmethod
+    @abstractmethod
+    def from_file(cls, file_path: Path, best_known: Individual = None):
+        pass
+
 
 class TravellingSalesman(Problem):
     valid_individuals: Dict[str, Individual] = {"path": PathIndividual}
@@ -66,13 +71,16 @@ class TravellingSalesman(Problem):
     def create_random(cls, num_cities,
                       x_range: Tuple[float, float] = (0, 100),
                       y_range: Tuple[float, float] = (0, 100)):
+        if num_cities < 4:
+            raise ValueError("Number of cities smaller than 4")
         cities = [City.create_random(x_range, y_range) for _ in range(num_cities)]
         return cls(cities)
 
     @classmethod
-    def from_file(cls, file_path: Path, best_known: float = None):
+    def from_file(cls, file_path: Union[str, Path], best_known: float = None) -> Problem:
+        file_path = Path(file_path)
         cities = []
-        with file_path.open() as fp:
+        with file_path.open() as fp:  # todo improve tsp parsing
             line = fp.readline()
             while line != "NODE_COORD_SECTION\n":
                 line = fp.readline()
@@ -122,6 +130,10 @@ class MultiDimFunction(Problem):
         self.vector_length = vector_length
         self.search_domain = search_domain
         super().__init__(best_known)
+
+    @classmethod
+    def from_file(cls, file_path: Path, best_known: Individual = None) -> Problem:
+        raise NotImplementedError()
 
     def create_individual(self, individual_type: str = "real") -> Individual:
         if individual_type in self.valid_individuals:

@@ -81,6 +81,3 @@ cycle_crossover = CycleCrossover()
 order_crossover = OrderCrossover()
 multi_crossover = MultiCrossover((cycle_crossover, order_crossover))
 single_point_crossover = SinglePointCrossover()
-
-
-
