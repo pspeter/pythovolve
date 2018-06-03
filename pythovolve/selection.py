@@ -16,7 +16,8 @@ class ProportionalSelector(Selector):
         super().__init__()
 
     def __call__(self, population: Sequence[Individual]) -> Individual:
-        weights = [1/indiv.score for indiv in population]
+        weights = [-indiv.score for indiv in population]
+        weights = [w - min(weights) + 1 for w in weights]  # shift to positive
         return random.choices(population, weights, k=1)[0]
 
 
