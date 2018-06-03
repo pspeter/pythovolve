@@ -404,10 +404,14 @@ class ProgressPlot:
                 ax.figure.canvas.draw()
 
             # update range of y-axis
-            _, y_max = ax.get_ylim()
+            y_min, y_max = ax.get_ylim()
             if self.best.score > y_max * 0.95:
-                ax.set_ylim(0, self.best.score * 1.3)
+                ax.set_ylim(y_min, self.best.score * 1.3)
                 ax.figure.canvas.draw()
+            elif self.best.score < y_max * 0.95:
+                ax.set_ylim(self.best.score * 1.3, y_max)
+                ax.figure.canvas.draw()
+
 
             self.current_line.set_data(zip(*sorted(self.current_best_scores)))
             self.total_line.set_data(zip(*sorted(self.best_scores)))
