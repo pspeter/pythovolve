@@ -57,15 +57,17 @@ def main():
     parser.add_argument("-P", "--keep-parents", action="store_true",
                         help="Decides whether ES selects from the parents and their"
                              "children (True) or only the children (False). Setting "
-                             "this flag corresponds to mu+lambda, while not setting "
+                             "the -P flag corresponds to mu+lambda, while not setting "
                              "it corresponds to a mu,lambda strategy.")
+    parser.add_argument("--max-selection-pressure", type=int, default=50,
+                        help="Max selection pressure parameter. Only OSGA uses this"
+                             "value.")
     parser.add_argument("-m", "--mutator", choices=["inversion", "translocation",
                                                     "gauss"], nargs="*",
                         default=["inversion", "translocation"],
                         help="Choose which mutator to use. TSP only supports inversion "
                              "and translocation, while MDTF only supports gauss"
-                             "currently. You can also specify more than one mutator."
-                             "Each call will randomly choose among one of them.")
+                             "currently. You can also specify more than one mutator.")
     parser.add_argument("-R", "--mutation-rate", type=float, default=0.2,
                         help="Probability of mutating each child.")
     parser.add_argument("-c", "--crossover", choices=["cycle", "order", "single_point"],
@@ -73,8 +75,7 @@ def main():
                         help="Choose which crossover to use. Note that ES does not use "
                              "crossover. TSP only supports cycle and order, while MDTF "
                              "only supports single_point currently. You can specify more "
-                             "than one crossover. Each call will randomly choose among"
-                             "one of them.")
+                             "than one crossover.")
     parser.add_argument("-s", "--selector", choices=["proportional", "linear_rank",
                                                      "tournament"], nargs="*",
                         default=["proportional", "linear_rank", "tourament"],

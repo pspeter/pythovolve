@@ -14,6 +14,16 @@ from pythovolve.selection import Selector
 
 
 class EvolutionAlgorithm(metaclass=ABCMeta):
+    """Base class for evolutionary algorithms.
+
+    :param problem: Problem that can create and score individuals
+    :param population_size: The 'mu' parameter. Number of parents for each generation
+    :param max_generations: Stops after that many generations
+    :param callbacks: Optional callbacks
+    :param plot_progress: Wether to plot the progress while running. This has only been
+        tested with the matplotlib backend "TkAgg" and is not garantueed to work with others.
+    :param verbosity: Controls verbosity of output.
+    """
     def __init__(self, problem: Problem,
                  population_size: int = 100,
                  max_generations: int = 1000,
@@ -67,6 +77,11 @@ class EvolutionAlgorithm(metaclass=ABCMeta):
     def evolve(self) -> None:
         for callback in self.callbacks:
             callback.on_train_start()
+
+        if self.verbosity > 0:
+            print(f"{type(self).__name__} starts solving problem {type(self.problem).__name__}")
+            if self.problem.best_known is not None:
+                print(f"Best known solution so far is {self.problem.best_known.score}")
 
         self.stop_evolving = False
         if self.plot_progress:
@@ -123,7 +138,8 @@ class GeneticAlgorithm(EvolutionAlgorithm):
     :param max_generations: Stops after that many generations
     :param callbacks: Optional callbacks
     :param plot_progress: Wether to plot the progress while running. This has only been
-        tested with the matplotlib backend "TkAgg" and is not garantueed to work with others.
+        tested with the matplotlib backend "TkAgg" and is not garantueed to work with others
+    :param verbosity: Controls verbosity of output
     """
 
     def __init__(self, problem: Problem, selector: Selector,
@@ -191,6 +207,26 @@ class OSGeneticAlgorithm(GeneticAlgorithm):
     """Genetic Algorithm (GA) implementation using offspring selection (OS) as described by
         Affenzeller M., Wagner S. (2005)
 
+    :param problem: Problem that can create and score individuals
+    :param selector: Callable that returns one individual from a population
+    :param crossover:
+    :param mutator: Callable that mutates an individual
+    :param population_size: The 'mu' parameter. Number of parents for each generation
+    :param num_elites: Callable that crossbreeds two individuals and returns two children
+    :param max_generations: Stops after that many generations
+    :param max_selection_pressure: If selection pressure gets higher than this value, the
+        algorithm will terminate
+    :param success_ratio: Ratio of population_size that has to be better than their parents
+    :param comparison_factor_bounds: Tuple of lower and higher bound for comparison factor.
+        This factor determines, how much better than their parents a child has to be to be
+        considered successful. A value of 0 means, it has to be better than the worse parent,
+        while a value of 1 means it has to surpass the better parent as well. When calling
+        the evolve() method, this value will start with the lower bound and will be
+        incrementally increased up to the upper bound.
+    :param callbacks: Optional callbacks
+    :param plot_progress: Wether to plot the progress while running. This has only been
+        tested with the matplotlib backend "TkAgg" and is not garantueed to work with others.
+    :param verbosity: Controls verbosity of output.
     """
 
     def __init__(self, problem: Problem, selector: Selector,
@@ -235,7 +271,8 @@ class OSGeneticAlgorithm(GeneticAlgorithm):
                                        + self.population_size) / self.population_size
 
             if self.selection_pressure > self.max_selection_pressure:
-                print("Selection pressure too high. Stopping...")
+                print(f"Selection pressure too high. {self.selection_pressure} > "
+                      f"{self.max_selection_pressure}")
                 self.stop_evolving = True
                 break
 
@@ -272,6 +309,7 @@ class EvolutionStrategy(EvolutionAlgorithm):
     :param callbacks: Optional callbacks
     :param plot_progress: Wether to plot the progress while running. This has only been
         tested with the matplotlib backend "TkAgg" and is not garantueed to work with others.
+    :param verbosity: Controls verbosity of output.
     """
 
     def __init__(self, problem: Problem, selector: Selector,
@@ -287,7 +325,8 @@ class EvolutionStrategy(EvolutionAlgorithm):
         if num_children > population_size:
             raise ValueError("Number of children larger than number of parents")
 
-        super().__init__(problem, population_size, max_generations, callbacks, plot_progress, verbosity, **kwargs)
+        super().__init__(problem, population_size, max_generations, callbacks,
+                         plot_progress, verbosity, **kwargs)
         self.sigma_multiplier = sigma_multiplier
         self.keep_parents = keep_parents
         self.sigma = sigma_start
@@ -305,7 +344,8 @@ class EvolutionStrategy(EvolutionAlgorithm):
         if self.keep_parents:
             children.extend(self.population)
 
-        self.population = sorted(children)[:self.population_size]  # selection
+        # selection step
+        self.population = sorted(children)[:self.population_size]
 
         self._adapt_sigma(num_success)
 
@@ -313,7 +353,8 @@ class EvolutionStrategy(EvolutionAlgorithm):
         self.current_best_scores.append(self.current_best.score)
         self.generation += 1
 
-        if self.generation >= self.max_generations or self.min_sigma and self.sigma < self.min_sigma:
+        if self.generation >= self.max_generations or \
+                (self.min_sigma and self.sigma < self.min_sigma):
             self.stop_evolving = True
 
         for callback in self.callbacks:

@@ -27,7 +27,7 @@ class City:
 
 class Problem(metaclass=ABCMeta):
     def __init__(self, best_known: Individual = None):
-        self.best_known = None
+        self.best_known: Individual = None
         if best_known:
             self.score_individual(best_known)
 

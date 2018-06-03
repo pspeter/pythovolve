@@ -34,8 +34,8 @@ class TimerCallback(Callback):
 
     def on_train_end(self):
         run_time = time.time() - self.start_time
-        print(f"Timer: Algorithm took {run_time:.2} seconds and "
-              f"{run_time/self.algorithm.generation:.2} seconds per generation.")
+        print(f"Timer: Algorithm took {run_time:.2f} seconds and "
+              f"{run_time/self.algorithm.generation:.2f} seconds per generation.")
 
 
 class ProgressLoggerCallback(Callback):
