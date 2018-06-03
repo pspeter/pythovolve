@@ -238,7 +238,7 @@ class OSGeneticAlgorithm(GeneticAlgorithm):
             failure_children.extend(self.crossover(father, mother))
 
         chosen = success_children + random.sample(failure_children, k=self.population_size - len(success_children))
-        return [self.mutator(child) for child in chosen]
+        return chosen
 
     def _is_successful(self, child: Individual, parent1: Individual, parent2: Individual) -> bool:
         self.problem.score_individual(child)
