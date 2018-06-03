@@ -156,3 +156,6 @@ goldstein_price_problem = MultiDimFunction(_goldstein_price, 2, (-2, 2),
 
 booth_problem = MultiDimFunction("(x[0] + 2*x[1] - 7)**2 + (2*x[0] + x[1] - 5)**2", 2, (-10, 10),
                                  best_known=RealValueIndividual([1, 3]))
+
+hoelder_table_problem = MultiDimFunction("-Abs(sin(x[0])*cos(x[1])*exp(1-((x[0]**2+x[1]**2)**0.5)/pi))", 2,
+                                         (-10, 10), best_known=RealValueIndividual([0.805502, 9.66459]))

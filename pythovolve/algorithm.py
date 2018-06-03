@@ -13,7 +13,7 @@ from matplotlib.figure import Figure
 
 from pythovolve.callbacks import Callback
 from pythovolve.problems import Problem, TravellingSalesman, MultiDimFunction, sphere_problem, goldstein_price_problem, \
-    booth_problem
+    booth_problem, hoelder_table_problem
 from pythovolve.individuals import Individual, PathIndividual
 from pythovolve.crossover import Crossover, CycleCrossover, order_crossover, cycle_crossover, multi_crossover, \
     single_point_crossover
@@ -475,9 +475,10 @@ if __name__ == "__main__":
     random.seed(123)
 
     n_cities = 60
-    tsp = TravellingSalesman.create_random(n_cities)
-    #mut = multi_path_mutator
-    #cx = multi_crossover
+    # tsp = TravellingSalesman.create_random(n_cities)
+    # tsp = TravellingSalesman.from_file(Path.home() / "downloads" / "ch130.tsp")  # best known: 6110
+    mut = multi_path_mutator
+    cx = multi_crossover
     sel = multi_selector
 
     # prob = goldstein_price_problem
@@ -485,10 +486,10 @@ if __name__ == "__main__":
     # print("Best known so far:", prob.best_known)
     mut = RealValueMutator(1)
     cx = single_point_crossover
-    # sel = multi_selector
-
-    # es = EvolutionStrategy(tsp, sel, mut, sigma_start=0.5,
-    #                        keep_parents=False, max_generations=500, plot_progress=True)
+    sel = multi_selector
+    #
+    # es = EvolutionStrategy(sphere_problem, sel, mut, sigma_start=0.5,
+    #                        keep_parents=False, max_generations=100, plot_progress=True)
     # es.evolve()
     # print("best:", es.best)
 
@@ -496,11 +497,11 @@ if __name__ == "__main__":
     # ga.evolve()
     # print("best:", ga.best)
     start = time.time()
-    ga = OSGeneticAlgorithm(goldstein_price_problem, sel, cx, mut, 200, 1, comparison_factor_bounds=(0.5, 1),
-                            max_generations=100, plot_progress=False)
+    ga = OSGeneticAlgorithm(hoelder_table_problem, sel, cx, mut, 100, 0, comparison_factor_bounds=(0, 1),
+                            max_generations=500, max_selection_pressure=30, plot_progress=True)
     ga.evolve()
-    print("OSGA best found: ", ga.best, "in", time.time() - start, "seconds")
-    start = time.time()
-    ga = GeneticAlgorithm(goldstein_price_problem, sel, cx, mut, 200, 1, max_generations=500, plot_progress=False)
-    ga.evolve()
-    print("GA best found: ", ga.best, "in", time.time() - start, "seconds")
+    print("OSGA best found", "in", time.time() - start, "seconds:", ga.best)
+    #start = time.time()
+    #ga = GeneticAlgorithm(hoelder_table_problem, sel, cx, mut, 100, 0, max_generations=3000, plot_progress=False)
+    #ga.evolve()
+    #print("GA best found", "in", time.time() - start, "seconds:", ga.best)
