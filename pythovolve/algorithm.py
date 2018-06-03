@@ -41,7 +41,7 @@ class EvolutionAlgorithm(metaclass=ABCMeta):
             raise ValueError("Initial population is empty")
 
         self._population = None
-        self.population = [self.problem.create_individual() for _ in range(300)]
+        self.population = [self.problem.create_individual() for _ in range(self.population_size)]
 
         self.best_scores = []
         self.current_best_scores = []
