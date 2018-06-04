@@ -4,8 +4,6 @@ from typing import Sequence
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from pythovolve.problems import TravellingSalesman
-
 
 class ProgressPlot:
     def __init__(self, max_generations: int, data_queue: Queue, fig: Figure = None,
@@ -113,7 +111,7 @@ class ProgressPlot:
 
 
 class TSPPlot(ProgressPlot):
-    def __init__(self, max_generations: int, problem: TravellingSalesman, data_queue: Queue):
+    def __init__(self, max_generations: int, problem, data_queue: Queue):
 
         import matplotlib.pyplot as plt
 

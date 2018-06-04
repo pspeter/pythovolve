@@ -1,11 +1,14 @@
 import random
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
+from multiprocessing import Process
 from pathlib import Path
+from queue import Queue
 from typing import List, Tuple, Dict, Union
 
 from sympy.parsing.sympy_parser import parse_expr
 
+from pythovolve.plotting import TSPPlot, ProgressPlot
 from .individuals import Individual, PathIndividual, RealValueIndividual
 
 Point = namedtuple("Point", ["x", "y"])
@@ -42,6 +45,10 @@ class Problem(metaclass=ABCMeta):
     @classmethod
     @abstractmethod
     def from_file(cls, file_path: Path, best_known: Individual = None):
+        pass
+
+    @abstractmethod
+    def start_plot_process(self, max_generations: int) -> Tuple[Queue, Process]:
         pass
 
 
@@ -116,6 +123,12 @@ class TravellingSalesman(Problem):
             raise ValueError(f"Individuals of type {type(individual).__name__} "
                              f"are not supported by {type(self).__name__}")
 
+    def start_plot_process(self, max_generations: int) -> Tuple[Queue, Process]:
+        data_queue = Queue()
+        plot_process = Process(target=TSPPlot, args=(max_generations, self, data_queue))
+
+        return data_queue, plot_process
+
     def __repr__(self):
         return f"{type(self).__name__}(num_cities={len(self.cities)})"
 
@@ -153,6 +166,12 @@ class MultiDimFunction(Problem):
         else:
             raise ValueError(f"Individuals of type {type(individual).__name__} "
                              f"are not supported by {type(self).__name__}")
+
+    def start_plot_process(self, max_generations: int) -> Tuple[Queue, Process]:
+        data_queue = Queue()
+        plot_process = Process(target=ProgressPlot, args=(max_generations, data_queue))
+
+        return data_queue, plot_process
 
     def __repr__(self):
         return f"{type(self).__name__}(expression={self.expression})"

@@ -1,15 +1,13 @@
 import random
 import time
 from abc import ABCMeta, abstractmethod
-from multiprocessing import Queue, Process
 from typing import Tuple, List, Sequence
 
 from pythovolve.callbacks import Callback
 from pythovolve.crossover import Crossover
 from pythovolve.individuals import Individual
 from pythovolve.mutation import Mutator
-from pythovolve.plotting import TSPPlot, ProgressPlot
-from pythovolve.problems import Problem, TravellingSalesman
+from pythovolve.problems import Problem
 from pythovolve.selection import Selector
 
 
@@ -86,7 +84,7 @@ class EvolutionAlgorithm(metaclass=ABCMeta):
 
         self.stop_evolving = False
         if self.plot_progress:
-            data_queue, plot_process = self._start_plot_process()
+            data_queue, plot_process = self.problem.start_plot_process(self.max_generations)
             try:
                 plot_process.start()
                 time.sleep(2)  # wait for figure to open
@@ -110,16 +108,6 @@ class EvolutionAlgorithm(metaclass=ABCMeta):
     @abstractmethod
     def evolve_once(self) -> None:
         pass
-
-    def _start_plot_process(self) -> Tuple[Queue, Process]:
-        data_queue = Queue()
-
-        if isinstance(self.problem, TravellingSalesman):
-            plot_process = Process(target=TSPPlot, args=(self.max_generations, self.problem, data_queue))
-        else:
-            plot_process = Process(target=ProgressPlot, args=(self.max_generations, data_queue))
-
-        return data_queue, plot_process
 
     @classmethod
     def from_args(cls, **kwargs):
