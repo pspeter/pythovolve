@@ -34,8 +34,11 @@ class TimerCallback(Callback):
 
     def on_train_end(self):
         run_time = time.time() - self.start_time
-        print(f"Timer: Algorithm took {run_time:.2f} seconds and "
-              f"{run_time/self.algorithm.generation:.2f} seconds per generation.")
+        try:
+            print(f"Timer: Algorithm took {run_time:.2f} seconds and "
+                  f"{run_time/self.algorithm.generation:.2f} seconds per generation.")
+        except ZeroDivisionError:
+            print(f"Timer: Algorithm took {run_time:.2f} seconds")
 
 
 class ProgressLoggerCallback(Callback):
