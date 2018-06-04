@@ -24,6 +24,7 @@ class EvolutionAlgorithm(metaclass=ABCMeta):
         tested with the matplotlib backend "TkAgg" and is not garantueed to work with others.
     :param verbosity: Controls verbosity of output.
     """
+
     def __init__(self, problem: Problem,
                  population_size: int = 100,
                  max_generations: int = 1000,
@@ -79,7 +80,7 @@ class EvolutionAlgorithm(metaclass=ABCMeta):
             callback.on_train_start()
 
         if self.verbosity > 0:
-            print(f"{type(self).__name__} starts solving problem {type(self.problem).__name__}")
+            print(f"{type(self).__name__} starts solving problem {self.problem}")
             if self.problem.best_known is not None:
                 print(f"Best known solution so far is {self.problem.best_known.score}")
 
@@ -119,7 +120,6 @@ class EvolutionAlgorithm(metaclass=ABCMeta):
             plot_process = Process(target=ProgressPlot, args=(self.max_generations, data_queue))
 
         return data_queue, plot_process
-
 
     @classmethod
     def from_args(cls, **kwargs):

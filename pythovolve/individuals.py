@@ -72,7 +72,7 @@ class PathIndividual(Individual):
     def __init__(self, phenotype: List[int]):
         super().__init__(phenotype)
 
-    def clone(self):
+    def clone(self) -> Individual:
         return type(self)(self.phenotype[:])
 
     @classmethod
@@ -85,7 +85,7 @@ class RealValueIndividual(Individual):
         super().__init__(phenotype)
         self.value_range = value_range
 
-    def clone(self):
+    def clone(self) -> Individual:
         return type(self)(self.phenotype[:], self.value_range)
 
     @classmethod
