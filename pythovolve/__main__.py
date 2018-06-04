@@ -155,7 +155,7 @@ def main():
 
     def handle_multiple_names(multi_class, name_dict, arg, *constructor_args):
         if len(set(arg)) == 1:
-            return name_dict.get(arg[0])
+            return name_dict.get(arg[0])(*constructor_args)
         else:
             chosen = [name_dict.get(s) for s in set(arg)]
             chosen = [s(*constructor_args) for s in chosen if s is not None]
