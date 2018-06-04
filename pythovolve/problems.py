@@ -3,7 +3,7 @@ from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 from multiprocessing import Process
 from pathlib import Path
-from queue import Queue
+from multiprocessing import Queue
 from typing import List, Tuple, Dict, Union
 
 from sympy.parsing.sympy_parser import parse_expr
@@ -48,7 +48,7 @@ class Problem(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def start_plot_process(self, max_generations: int) -> Tuple[Queue, Process]:
+    def get_plot_process(self, max_generations: int) -> Tuple[Queue, Process]:
         pass
 
 
@@ -123,7 +123,7 @@ class TravellingSalesman(Problem):
             raise ValueError(f"Individuals of type {type(individual).__name__} "
                              f"are not supported by {type(self).__name__}")
 
-    def start_plot_process(self, max_generations: int) -> Tuple[Queue, Process]:
+    def get_plot_process(self, max_generations: int) -> Tuple[Queue, Process]:
         data_queue = Queue()
         plot_process = Process(target=TSPPlot, args=(max_generations, self, data_queue))
 
@@ -167,7 +167,7 @@ class MultiDimFunction(Problem):
             raise ValueError(f"Individuals of type {type(individual).__name__} "
                              f"are not supported by {type(self).__name__}")
 
-    def start_plot_process(self, max_generations: int) -> Tuple[Queue, Process]:
+    def get_plot_process(self, max_generations: int) -> Tuple[Queue, Process]:
         data_queue = Queue()
         plot_process = Process(target=ProgressPlot, args=(max_generations, data_queue))
 

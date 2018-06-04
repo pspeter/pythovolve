@@ -51,7 +51,7 @@ class ProgressLoggerCallback(Callback):
             message = f"Progress: Generation {self.algorithm.generation} of {self.algorithm.max_generations} - " \
                       f"total best: {self.algorithm.best.score:.2f}"
 
-            if self.algorithm.num_elites == 0:
+            if hasattr(self.algorithm, "num_elites") and self.algorithm.num_elites == 0:
                 message += f", generation best: {self.algorithm.current_best.score:.2f}"
 
             print(message)

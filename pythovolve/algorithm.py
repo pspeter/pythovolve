@@ -84,14 +84,13 @@ class EvolutionAlgorithm(metaclass=ABCMeta):
 
         self.stop_evolving = False
         if self.plot_progress:
-            data_queue, plot_process = self.problem.start_plot_process(self.max_generations)
+            data_queue, plot_process = self.problem.get_plot_process(self.max_generations)
             try:
                 plot_process.start()
                 time.sleep(2)  # wait for figure to open
                 while not self.stop_evolving:
                     self.evolve_once()
                     data_queue.put((self.current_best.score, self.best))
-
             finally:
                 for callback in self.callbacks:
                     callback.on_train_end()

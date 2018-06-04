@@ -146,13 +146,16 @@ def main():
 
     parser.add_argument("-e", "--num-elites", type=int, default=1,
                         help="The top -e individuals of each generation are kept "
-                             "without any modification for the next generation.")
+                             "without any modification for the next generation. "
+                             "(default 1)")
 
     parser.add_argument("-M", "--population-size", type=int, default=100,
-                        help="Size of population (mu). Used by all algorithms.")
+                        help="Size of population (mu). Used by all algorithms. "
+                             "(default 100)")
 
     parser.add_argument("-L", "--num-children", type=int, default=10,
-                        help="Number of children (lambda). Only ES uses this value.")
+                        help="Number of children (lambda). Only ES uses this value."
+                             "(default 10)")
 
     parser.add_argument("-P", "--keep-parents", action="store_true",
                         help="Decides whether ES selects from the parents and their"
@@ -162,7 +165,7 @@ def main():
 
     parser.add_argument("--max-selection-pressure", type=int, default=50,
                         help="Max selection pressure parameter. Only OSGA uses this"
-                             "value.")
+                             "value. (default 50)")
 
     parser.add_argument("-m", "--mutator", choices=["inversion", "translocation", "gauss"],
                         nargs="*", default=["inversion", "translocation"],
@@ -171,7 +174,7 @@ def main():
                              "currently. You can also specify more than one mutator.")
 
     parser.add_argument("-R", "--mutation-rate", type=float, default=0.2,
-                        help="Probability of mutating each child.")
+                        help="Probability of mutating each child. (default 0.2)")
 
     parser.add_argument("-c", "--crossover", choices=["cycle", "order", "single_point"],
                         nargs="*", default=["cycle", "order"],
@@ -226,15 +229,17 @@ def main():
         algorithm.evolve()
         results.append(algorithm.best.score)
         if args.n_runs > 1:
-            print(f"Run {i}: {algorithm.best.score:.4f}")
+            print(f"Run {i}: {algorithm.best.score:.2f}")
 
     if args.n_runs > 1:
         print()
         print(f"All runs completed.")
-        print(f"Average score:        {mean(results):.4f}")
-        print(f"Standard deviation:   {stdev(results):.4f}")
+        print(f"Average score:        {mean(results):.2f}")
+        print(f"Standard deviation:   {stdev(results):.2f}")
     else:
         print(f"Best score: {results[0]}")
+
+    print(f"Best known result: {algorithm.problem.best_known}")
 
 
 if __name__ == "__main__":
