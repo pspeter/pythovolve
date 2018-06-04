@@ -1,6 +1,7 @@
 import argparse
 import warnings
 from pathlib import Path
+from statistics import mean, stdev
 
 from pythovolve.algorithm import EvolutionStrategy, GeneticAlgorithm, OSGeneticAlgorithm, EvolutionAlgorithm
 from pythovolve.callbacks import EarlyStopCallback, TimerCallback, ProgressLoggerCallback
@@ -82,7 +83,7 @@ def _algorithm_from_args(args) -> EvolutionAlgorithm:
     crossover = handle_multiple_names(MultiCrossover, crossovers, args.crossover)
     mutator = handle_multiple_names(MultiPathMutator, mutators, args.mutator, args.mutation_rate)
 
-    kwargs = vars(args)
+    kwargs = vars(args).copy()  # copy to not mess with original args for multiple runs
     kwargs["selector"] = selector
     kwargs["crossover"] = crossover
     kwargs["mutator"] = mutator
@@ -203,15 +204,34 @@ def main():
                              "matplotlib. This has only been tested using the "
                              "TkAgg backend.")
 
+    parser.add_argument("-N", "--n_times", type=int, default=1,
+                        help="Run this algorithm N times. If N>1, print mean and "
+                             "standard deviation of best results.")
+
     parser.add_argument("-v", "--verbosity", type=int, default=1,
                         help="Set verbosity level")
 
     args = parser.parse_args()
 
-    algorithm = _algorithm_from_args(args)
-    algorithm.evolve()
+    if args.n_times > 1 and args.plot_progress:
+        warnings.warn("Running multiple experiments with plot_progress==True is not recommended")
 
-    print("Best found:", algorithm.best)
+    results = []
+
+    for i in range(args.n_times):
+        algorithm = _algorithm_from_args(args)
+        algorithm.evolve()
+        results.append(algorithm.best.score)
+        if args.n_times > 1:
+            print(f"Run {i}: {algorithm.best.score:.4f}")
+
+    if args.n_times > 1:
+        print()
+        print(f"All runs completed.")
+        print(f"Average score:        {mean(results):.4f}")
+        print(f"Standard deviation:   {stdev(results):.4f}")
+    else:
+        print(f"Best score: {results[0]}")
 
 
 if __name__ == "__main__":
