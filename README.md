@@ -22,3 +22,7 @@ To check out a simple example, run
 To run an ES on a difficult multi dimensional test function, try
 
     python -m pythovolve ES -d hoelder_table -m gauss -c single_point -p
+    
+For a full list and explanation of all CLI parameters, run
+
+    python -m pythovolve -h
