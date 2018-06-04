@@ -1,9 +1,6 @@
 from multiprocessing import Queue
 from typing import Sequence
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-from matplotlib.animation import FuncAnimation
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
@@ -13,6 +10,15 @@ from pythovolve.problems import TravellingSalesman
 class ProgressPlot:
     def __init__(self, max_generations: int, data_queue: Queue, fig: Figure = None,
                  axes: Sequence[Axes] = None):
+
+        # these imports can't be at the top of the file as they should only be
+        # imported by the process running the plots. If both processes import
+        # matplotlib, the child process will crash on MacOS.
+        # see https://stackoverflow.com/questions/9879371
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+        from matplotlib.animation import FuncAnimation
+
         self.max_generations = max_generations
         # set to True if there's new data to plot, set to false after it has been plotted
         self.stale = False
@@ -108,6 +114,9 @@ class ProgressPlot:
 
 class TSPPlot(ProgressPlot):
     def __init__(self, max_generations: int, problem: TravellingSalesman, data_queue: Queue):
+
+        import matplotlib.pyplot as plt
+
         self.problem = problem
         self.path_lines = []
         self.city_points = []
