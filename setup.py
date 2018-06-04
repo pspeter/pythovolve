@@ -13,7 +13,7 @@ setup(name='pythovolve',
       author_email='peter.schmidb@gmail.com',
       license='MIT',
       packages=['pythovolve'],
-      install_requires=["matplotlib", "seaborn", 'sympy'],
+      install_requires=["matplotlib", "seaborn", "sympy", "pandas", "scipy"],
       zip_safe=False,
       classifiers=(
           "Programming Language :: Python :: 3.6",
