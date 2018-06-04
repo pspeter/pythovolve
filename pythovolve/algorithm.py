@@ -151,7 +151,7 @@ class GeneticAlgorithm(EvolutionAlgorithm):
 
         elites, non_elites = self._split_elites(self.population)
 
-        children = self._generate_children()
+        children = self._generate_children(self.population_size - self.num_elites)
 
         # we don't want to mutate our elites, only the children
         self.population = [self.mutator(child) for child in children] + elites
@@ -176,15 +176,15 @@ class GeneticAlgorithm(EvolutionAlgorithm):
         sorted_population = sorted(population)
         return sorted_population[:self.num_elites], sorted_population[self.num_elites:]
 
-    def _generate_children(self):
+    def _generate_children(self, num_children: int):
         children = []
 
-        for _ in range(self.population_size // 2):
+        for _ in range(num_children // 2):
             father, mother = self.selector(self.population), self.selector(self.population)
             children += self.crossover(father, mother)
 
-        # in case population_size is not an even number, add one more child
-        if len(children) < self.population_size:
+        # in case population_size - num_elites is not an even number, add one more child
+        if len(children) < num_children:
             father, mother = self.selector(self.population), self.selector(self.population)
             children += self.crossover(father, mother)[:1]
 
@@ -237,11 +237,11 @@ class OSGeneticAlgorithm(GeneticAlgorithm):
         self.success_ratio = success_ratio
         self.selection_pressure = 0
 
-    def _generate_children(self):
+    def _generate_children(self, num_children):
         success_children = []
         failure_children = []
 
-        while len(success_children) < self.success_ratio * self.population_size:
+        while len(success_children) < self.success_ratio * num_children:
             father, mother = self.selector(self.population), self.selector(self.population)
             child1, child2 = self.crossover(father, mother)
 
@@ -256,7 +256,7 @@ class OSGeneticAlgorithm(GeneticAlgorithm):
                 failure_children.append(child2)
 
             self.selection_pressure = (len(failure_children) + len(success_children)
-                                       + self.population_size) / self.population_size
+                                       + num_children) / num_children
 
             if self.selection_pressure > self.max_selection_pressure:
                 print(f"Selection pressure too high. {self.selection_pressure} > "
@@ -268,11 +268,11 @@ class OSGeneticAlgorithm(GeneticAlgorithm):
 
         # if success ratio was reached before enough children were produced for a full
         # new generation, create more children
-        while len(failure_children) + len(success_children) < self.population_size:
+        while len(failure_children) + len(success_children) < num_children:
             father, mother = self.selector(self.population), self.selector(self.population)
             failure_children.extend(self.crossover(father, mother))
 
-        chosen = success_children + random.sample(failure_children, k=self.population_size - len(success_children))
+        chosen = success_children + random.sample(failure_children, k=num_children - len(success_children))
         return chosen
 
     def _is_successful(self, child: Individual, parent1: Individual, parent2: Individual) -> bool:
@@ -327,7 +327,7 @@ class EvolutionStrategy(EvolutionAlgorithm):
         for callback in self.callbacks:
             callback.on_generation_start()
 
-        children, num_success = self._generate_children()
+        children, num_success = self._generate_children(self.num_children)
 
         if self.keep_parents:
             children.extend(self.population)
@@ -355,11 +355,11 @@ class EvolutionStrategy(EvolutionAlgorithm):
         else:
             self.sigma /= self.sigma_multiplier
 
-    def _generate_children(self):
+    def _generate_children(self, num_children: int):
         children = []
         num_success = 0
 
-        for _ in range(self.num_children):
+        for _ in range(num_children):
             parent = self.selector(self.population)
             child = self.mutator(parent.clone(), self.sigma)
             self.problem.score_individual(child)
