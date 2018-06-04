@@ -75,7 +75,7 @@ class EvolutionAlgorithm(metaclass=ABCMeta):
 
     def evolve(self) -> None:
         for callback in self.callbacks:
-            callback.on_train_start()
+            callback.on_train_start(self.verbosity)
 
         if self.verbosity > 0:
             print(f"{type(self).__name__} starts solving problem {self.problem}")
@@ -103,7 +103,7 @@ class EvolutionAlgorithm(metaclass=ABCMeta):
                 self.evolve_once()
 
             for callback in self.callbacks:
-                callback.on_train_end()
+                callback.on_train_end(self.verbosity)
 
     @abstractmethod
     def evolve_once(self) -> None:
@@ -147,7 +147,7 @@ class GeneticAlgorithm(EvolutionAlgorithm):
 
     def evolve_once(self) -> None:
         for callback in self.callbacks:
-            callback.on_generation_start()
+            callback.on_generation_start(self.verbosity)
 
         elites, non_elites = self._split_elites(self.population)
 
@@ -164,7 +164,7 @@ class GeneticAlgorithm(EvolutionAlgorithm):
             self.stop_evolving = True
 
         for callback in self.callbacks:
-            callback.on_generation_end()
+            callback.on_generation_end(self.verbosity)
 
     def _split_elites(self, population: List[Individual]) -> Tuple[List[Individual], List[Individual]]:
         """
@@ -325,7 +325,7 @@ class EvolutionStrategy(EvolutionAlgorithm):
 
     def evolve_once(self) -> None:
         for callback in self.callbacks:
-            callback.on_generation_start()
+            callback.on_generation_start(self.verbosity)
 
         children, num_success = self._generate_children(self.num_children)
 
@@ -346,7 +346,7 @@ class EvolutionStrategy(EvolutionAlgorithm):
             self.stop_evolving = True
 
         for callback in self.callbacks:
-            callback.on_generation_end()
+            callback.on_generation_end(self.verbosity)
 
     def _adapt_sigma(self, num_success: int):
         """Sigma adaption as suggested by Schwefel (1981)"""

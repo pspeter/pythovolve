@@ -89,8 +89,8 @@ def _algorithm_from_args(args) -> EvolutionAlgorithm:
     kwargs["mutator"] = mutator
     kwargs["callbacks"] = []
 
-    if args.min_sigma or args.no_progress:
-        kwargs["callbacks"].append(EarlyStopCallback(args.min_sigma, args.no_progress))
+    if args.min_sigma or args.no_progress or args.max_seconds:
+        kwargs["callbacks"].append(EarlyStopCallback(args.min_sigma, args.no_progress, args.max_seconds))
 
     if args.verbosity >= 1:
         kwargs["callbacks"].append(TimerCallback())
@@ -199,33 +199,36 @@ def main():
                         help="If set, the algorithm will stop if it has no progress"
                              "for this many generations.")
 
+    parser.add_argument("--max-seconds", type=int,
+                        help="If set, the algorithm will stop after this many seconds.")
+
     parser.add_argument("-p", "--plot-progress", action="store_true",
                         help="This flag controls whether to plot progress using "
                              "matplotlib. This has only been tested using the "
                              "TkAgg backend.")
 
-    parser.add_argument("-N", "--n_times", type=int, default=1,
+    parser.add_argument("-N", "--n_runs", type=int, default=1,
                         help="Run this algorithm N times. If N>1, print mean and "
-                             "standard deviation of best results.")
+                             "standard deviation of best results. (Default 1)")
 
     parser.add_argument("-v", "--verbosity", type=int, default=1,
                         help="Set verbosity level")
 
     args = parser.parse_args()
 
-    if args.n_times > 1 and args.plot_progress:
+    if args.n_runs > 1 and args.plot_progress:
         warnings.warn("Running multiple experiments with plot_progress==True is not recommended")
 
     results = []
 
-    for i in range(args.n_times):
+    for i in range(args.n_runs):
         algorithm = _algorithm_from_args(args)
         algorithm.evolve()
         results.append(algorithm.best.score)
-        if args.n_times > 1:
+        if args.n_runs > 1:
             print(f"Run {i}: {algorithm.best.score:.4f}")
 
-    if args.n_times > 1:
+    if args.n_runs > 1:
         print()
         print(f"All runs completed.")
         print(f"Average score:        {mean(results):.4f}")
