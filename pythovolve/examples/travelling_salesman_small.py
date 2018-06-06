@@ -1,17 +1,15 @@
-from pythovolve.callbacks import TimerCallback, EarlyStopCallback
-
-from pythovolve.problems import TravellingSalesman
-
-from pythovolve.crossover import cycle_crossover, order_crossover
-
-from pythovolve.selection import proportional_selector, TournamentSelector
+import random
 
 from pythovolve.algorithm import GeneticAlgorithm
+from pythovolve.callbacks import TimerCallback, EarlyStopCallback
+from pythovolve.crossover import order_crossover
 from pythovolve.mutation import inversion_mutator, translocation_mutator
+from pythovolve.problems import TravellingSalesman
+from pythovolve.selection import TournamentSelector
 
+random.seed(123)
 
 if __name__ == "__main__":
-
     problem = TravellingSalesman.create_random(40)
 
     selectors = [TournamentSelector(10)]

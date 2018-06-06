@@ -15,12 +15,19 @@ to install pythovolve.
 
 ### Try it out (as a Library)
 
-Check out the examples in the examples directory. 
-Simply run any of them as a script with pythovolve installed.
+Check out the examples in the examples directory. To do that, clone the repository using git:
+
+    git clone https://github.com/peter-schmidbauer/pythovolve.git
+
+If you have already installed pythovolve, you can now run
+
+    python pythovolve/examples/<example_script.py>
+    
+to execute one of the examples.
 
 ### Try it out (as a CLI)
 
-To check out a simple CLI example, run 
+If you have already installed pythovolve, check out a simple CLI example by running:
 
     python -m pythovolve GA -r 30 -p
     
