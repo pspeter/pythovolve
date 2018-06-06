@@ -13,9 +13,14 @@ Next, simply execute
     
 to install pythovolve.
 
-### Try it out
+### Try it out (as a Library)
 
-To check out a simple example, run 
+Check out the examples in the examples directory. 
+Simply run any of them as a script with pythovolve installed.
+
+### Try it out (as a CLI)
+
+To check out a simple CLI example, run 
 
     python -m pythovolve GA -r 30 -p
     
@@ -26,3 +31,7 @@ To run an ES on a difficult multi dimensional test function, try
 For a full list and explanation of all CLI parameters, run
 
     python -m pythovolve -h
+    
+
+
+    
