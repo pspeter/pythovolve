@@ -14,6 +14,12 @@ class Mutator(metaclass=ABCMeta):
         pass
 
 
+class PathMutator(Mutator, metaclass=ABCMeta):
+    @abstractmethod
+    def __call__(self, individual: PathIndividual, *_) -> PathIndividual:
+        pass
+
+
 class BitFlipMutator(Mutator):
     def __init__(self, max_flips: int, probability: float = 0.1):
         super().__init__(probability)
@@ -31,12 +37,6 @@ class BitFlipMutator(Mutator):
             individual.phenotype[flip_index] ^= True  # flips bit
 
         return individual
-
-
-class PathMutator(Mutator, metaclass=ABCMeta):
-    @abstractmethod
-    def __call__(self, individual: PathIndividual, *_) -> PathIndividual:
-        pass
 
 
 class InversionMutator(PathMutator):
@@ -73,7 +73,26 @@ class MultiPathMutator(PathMutator):
         return mutator(individual)
 
 
-class GaussNoiseMutator(Mutator):
+class SigmaMutator(Mutator, metaclass=ABCMeta):
+    def __init__(self, inital_sigma: float, sigma_multiplier: float = 1.15, probability: float = 1):
+        super().__init__(probability)
+        self.sigma_multiplier = sigma_multiplier
+        self.sigma = inital_sigma
+
+    @abstractmethod
+    def __call__(self, individual: Individual):
+        pass
+
+    def adapt_sigma(self, percent_success: float):
+        """Sigma adaption as suggested by Schwefel (1981)"""
+        if percent_success > 1 / 5:
+            self.sigma *= self.sigma_multiplier
+        else:
+            self.sigma /= self.sigma_multiplier
+        print(self.sigma)
+
+
+class GaussNoiseMutator(SigmaMutator):
     def __init__(self, probability: float = 1):
         super().__init__(probability)
 

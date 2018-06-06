@@ -67,12 +67,12 @@ def _algorithm_from_args(args) -> EvolutionAlgorithm:
 
     Algorithm = algorithms[args.algorithm]
 
-    def handle_multiple_names(multi_class, name_dict, arg, *constructor_args):
+    def handle_multiple_names(multi_class, name_dict, arg, **constructor_args):
         # a bit hacky way to handle multiple mutators, crossovers and selectors
 
         if len(set(arg)) == 1:
             # if only one name, return corresponding class with name 'arg' in 'name_dict'
-            return name_dict.get(arg[0])(*constructor_args)
+            return name_dict.get(arg[0])(**constructor_args)
         else:
             # if more than one name, use 'multi_class' to pack them together
             chosen = [name_dict.get(s) for s in set(arg)]
@@ -81,7 +81,7 @@ def _algorithm_from_args(args) -> EvolutionAlgorithm:
 
     selector = handle_multiple_names(MultiSelector, selectors, args.selector)
     crossover = handle_multiple_names(MultiCrossover, crossovers, args.crossover)
-    mutator = handle_multiple_names(MultiPathMutator, mutators, args.mutator, args.mutation_rate)
+    mutator = handle_multiple_names(MultiPathMutator, mutators, args.mutator, probability=args.mutation_rate)
 
     kwargs = vars(args).copy()  # copy to not mess with original args for multiple runs
     kwargs["selector"] = selector

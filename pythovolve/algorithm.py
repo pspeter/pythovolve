@@ -6,7 +6,7 @@ from typing import Tuple, List, Sequence
 from pythovolve.callbacks import Callback
 from pythovolve.crossover import Crossover
 from pythovolve.individuals import Individual
-from pythovolve.mutation import Mutator
+from pythovolve.mutation import Mutator, SigmaMutator
 from pythovolve.problems import Problem
 from pythovolve.selection import Selector
 
@@ -300,7 +300,7 @@ class EvolutionStrategy(EvolutionAlgorithm):
     """
 
     def __init__(self, problem: Problem, selector: Selector,
-                 mutator: Mutator,
+                 mutator: SigmaMutator,
                  population_size: int = 100, num_children: int = 10,
                  sigma_start: float = 1., keep_parents: bool = False,
                  sigma_multiplier: float = 1.15,
@@ -334,7 +334,7 @@ class EvolutionStrategy(EvolutionAlgorithm):
         # selection step
         self.population = sorted(children)[:self.population_size]
 
-        self._adapt_sigma(num_success)
+        self.mutator.adapt_sigma(num_success / len(children))
 
         self.best_scores.append(self.best.score)
         self.current_best_scores.append(self.current_best.score)
@@ -347,12 +347,6 @@ class EvolutionStrategy(EvolutionAlgorithm):
         for callback in self.callbacks:
             callback.on_generation_end(self.verbosity)
 
-    def _adapt_sigma(self, num_success: int):
-        """Sigma adaption as suggested by Schwefel (1981)"""
-        if num_success > 1 / 5 * self.num_children:
-            self.sigma *= self.sigma_multiplier
-        else:
-            self.sigma /= self.sigma_multiplier
 
     def _generate_children(self, num_children: int):
         children = []
