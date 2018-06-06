@@ -62,17 +62,6 @@ class TranslocationMutator(PathMutator):
         return individual
 
 
-class MultiPathMutator(PathMutator):
-    def __init__(self, mutators: Sequence[PathMutator], weights: Sequence[float] = None):
-        super().__init__(1)
-        self.mutators = mutators
-        self.weights = weights
-
-    def __call__(self, individual: PathIndividual, *_) -> PathIndividual:
-        mutator = random.choices(self.mutators, self.weights, k=1)[0]
-        return mutator(individual)
-
-
 class SigmaMutator(Mutator, metaclass=ABCMeta):
     def __init__(self, inital_sigma: float, sigma_multiplier: float = 1.15, probability: float = 1):
         super().__init__(probability)
@@ -115,5 +104,4 @@ class GaussNoiseMutator(SigmaMutator):
 
 inversion_mutator = InversionMutator()
 translocation_mutator = TranslocationMutator()
-multi_path_mutator = MultiPathMutator((inversion_mutator, translocation_mutator))
 real_value_mutator = GaussNoiseMutator()

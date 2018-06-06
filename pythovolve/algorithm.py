@@ -1,7 +1,7 @@
 import random
 import time
 from abc import ABCMeta, abstractmethod
-from typing import Tuple, List, Sequence
+from typing import Tuple, List, Sequence, Union, Any
 
 from pythovolve.callbacks import Callback
 from pythovolve.crossover import Crossover
@@ -129,8 +129,10 @@ class GeneticAlgorithm(EvolutionAlgorithm):
     :param verbosity: Controls verbosity of output
     """
 
-    def __init__(self, problem: Problem, selector: Selector,
-                 crossover: Crossover, mutator: Mutator,
+    def __init__(self, problem: Problem,
+                 selectors: Union[Sequence[Selector], Selector],
+                 crossovers: Union[Sequence[Crossover], Crossover],
+                 mutators: Union[Sequence[Mutator], Mutator],
                  population_size: int = 100, num_elites: int = 0,
                  max_generations: int = 1000,
                  callbacks: Sequence[Callback] = None,
@@ -138,9 +140,9 @@ class GeneticAlgorithm(EvolutionAlgorithm):
                  verbosity: int = 1,
                  **kwargs):
         super().__init__(problem, population_size, max_generations, callbacks, plot_progress, verbosity, **kwargs)
-        self.selector = selector
-        self.crossover = crossover
-        self.mutator = mutator
+        self.selectors = _as_list(selectors)
+        self.crossovers = _as_list(crossovers)
+        self.mutators = _as_list(mutators)
 
         self.num_elites = num_elites
 
@@ -153,7 +155,7 @@ class GeneticAlgorithm(EvolutionAlgorithm):
         children = self._generate_children(self.population_size - self.num_elites)
 
         # we don't want to mutate our elites, only the children
-        self.population = [self.mutator(child) for child in children] + elites
+        self.population = [random.choice(self.mutators)(child) for child in children] + elites
 
         self.best_scores.append(self.best.score)
         self.current_best_scores.append(self.current_best.score)
@@ -179,13 +181,15 @@ class GeneticAlgorithm(EvolutionAlgorithm):
         children = []
 
         for _ in range(num_children // 2):
-            father, mother = self.selector(self.population), self.selector(self.population)
-            children += self.crossover(father, mother)
+            father = random.choice(self.selectors)(self.population)
+            mother = random.choice(self.selectors)(self.population)
+            children += random.choice(self.crossovers)(father, mother)
 
         # in case population_size - num_elites is not an even number, add one more child
         if len(children) < num_children:
-            father, mother = self.selector(self.population), self.selector(self.population)
-            children += self.crossover(father, mother)[:1]
+            father = random.choice(self.selectors)(self.population)
+            mother = random.choice(self.selectors)(self.population)
+            children += random.choice(self.crossovers)(father, mother)[:1]
 
         return children
 
@@ -216,8 +220,10 @@ class OSGeneticAlgorithm(GeneticAlgorithm):
     :param verbosity: Controls verbosity of output.
     """
 
-    def __init__(self, problem: Problem, selector: Selector,
-                 crossover: Crossover, mutator: Mutator,
+    def __init__(self, problem: Problem,
+                 selectors: Union[Sequence[Selector], Selector],
+                 crossovers: Union[Sequence[Crossover], Crossover],
+                 mutators: Union[Sequence[Mutator], Mutator],
                  population_size: int = 100, num_elites: int = 0,
                  max_generations: int = 1000, max_selection_pressure: float = 10,
                  success_ratio: float = 0.5,
@@ -226,7 +232,7 @@ class OSGeneticAlgorithm(GeneticAlgorithm):
                  plot_progress: bool = False,
                  verbosity: int = 1,
                  **kwargs):
-        super().__init__(problem, selector, crossover, mutator, population_size,
+        super().__init__(problem, selectors, crossovers, mutators, population_size,
                          num_elites, max_generations, callbacks, plot_progress, verbosity, **kwargs)
         self.comparison_factor_bounds = comparison_factor_bounds
         self.comparison_factor = comparison_factor_bounds[0]
@@ -241,8 +247,9 @@ class OSGeneticAlgorithm(GeneticAlgorithm):
         failure_children = []
 
         while len(success_children) < self.success_ratio * num_children:
-            father, mother = self.selector(self.population), self.selector(self.population)
-            child1, child2 = self.crossover(father, mother)
+            father = random.choice(self.selectors)(self.population)
+            mother = random.choice(self.selectors)(self.population)
+            child1, child2 = random.choice(self.crossovers)(father, mother)
 
             if self._is_successful(child1, father, mother):
                 success_children.append(child1)
@@ -268,8 +275,9 @@ class OSGeneticAlgorithm(GeneticAlgorithm):
         # if success ratio was reached before enough children were produced for a full
         # new generation, create more children
         while len(failure_children) + len(success_children) < num_children:
-            father, mother = self.selector(self.population), self.selector(self.population)
-            failure_children.extend(self.crossover(father, mother))
+            father = random.choice(self.selectors)(self.population)
+            mother = random.choice(self.selectors)(self.population)
+            failure_children.extend(random.choice(self.crossovers)(father, mother))
 
         chosen = success_children + random.sample(failure_children, k=num_children - len(success_children))
         return chosen
@@ -299,8 +307,9 @@ class EvolutionStrategy(EvolutionAlgorithm):
     :param verbosity: Controls verbosity of output.
     """
 
-    def __init__(self, problem: Problem, selector: Selector,
-                 mutator: SigmaMutator,
+    def __init__(self, problem: Problem,
+                 selector: Union[Sequence[Selector], Selector],
+                 mutator: Union[Sequence[SigmaMutator], SigmaMutator],
                  population_size: int = 100, num_children: int = 10,
                  sigma_start: float = 1., keep_parents: bool = False,
                  sigma_multiplier: float = 1.15,
@@ -318,8 +327,8 @@ class EvolutionStrategy(EvolutionAlgorithm):
         self.keep_parents = keep_parents
         self.sigma = sigma_start
         self.num_children = num_children
-        self.selector = selector
-        self.mutator = mutator
+        self.selectors = _as_list(selector)
+        self.mutators = _as_list(mutator)
         self.min_sigma = min_sigma
 
     def evolve_once(self) -> None:
@@ -334,7 +343,8 @@ class EvolutionStrategy(EvolutionAlgorithm):
         # selection step
         self.population = sorted(children)[:self.population_size]
 
-        self.mutator.adapt_sigma(num_success / len(children))
+        for mutator in self.mutators:
+            mutator.adapt_sigma(num_success / len(children))
 
         self.best_scores.append(self.best.score)
         self.current_best_scores.append(self.current_best.score)
@@ -347,14 +357,13 @@ class EvolutionStrategy(EvolutionAlgorithm):
         for callback in self.callbacks:
             callback.on_generation_end(self.verbosity)
 
-
     def _generate_children(self, num_children: int):
         children = []
         num_success = 0
 
         for _ in range(num_children):
-            parent = self.selector(self.population)
-            child = self.mutator(parent.clone(), self.sigma)
+            parent = random.choice(self.selectors)(self.population)
+            child = random.choice(self.mutators)(parent.clone(), self.sigma)
             self.problem.score_individual(child)
             children.append(child)
 
@@ -362,3 +371,7 @@ class EvolutionStrategy(EvolutionAlgorithm):
                 num_success += 1
 
         return children, num_success
+
+
+def _as_list(item: Union[List[Any], Any]) -> List[Any]:
+    return item if isinstance(item, Sequence) else [item]

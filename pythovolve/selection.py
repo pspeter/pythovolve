@@ -42,18 +42,6 @@ class TournamentSelector(Selector):
         return min(chosen, key=lambda ind: ind.score)
 
 
-class MultiSelector(Selector):
-    def __init__(self, selectors: Sequence[Selector], weights: Sequence[float] = None):
-        super().__init__()
-        self.selectors = selectors
-        self.weights = weights
-
-    def __call__(self, population: Sequence[Individual]) -> Individual:
-        selector = random.choices(self.selectors, self.weights, k=1)[0]
-        return selector(population)
-
-
 proportional_selector = ProportionalSelector()
 linear_rank_selector = LinearRankSelector()
 tournament_selector = TournamentSelector()
-multi_selector = MultiSelector((proportional_selector, linear_rank_selector, tournament_selector))

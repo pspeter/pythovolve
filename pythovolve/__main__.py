@@ -167,7 +167,7 @@ def main():
                         help="Max selection pressure parameter. Only OSGA uses this"
                              "value. (default 50)")
 
-    parser.add_argument("-m", "--mutator", choices=["inversion", "translocation", "gauss"],
+    parser.add_argument("-m", "--mutators", choices=["inversion", "translocation", "gauss"],
                         nargs="*", default=["inversion", "translocation"],
                         help="Choose which mutator to use. TSP only supports inversion "
                              "and translocation, while MDTF only supports gauss"
@@ -176,14 +176,14 @@ def main():
     parser.add_argument("-R", "--mutation-rate", type=float, default=0.2,
                         help="Probability of mutating each child. (default 0.2)")
 
-    parser.add_argument("-c", "--crossover", choices=["cycle", "order", "single_point"],
+    parser.add_argument("-c", "--crossovers", choices=["cycle", "order", "single_point"],
                         nargs="*", default=["cycle", "order"],
                         help="Choose which crossover to use. Note that ES does not use "
                              "crossover. TSP only supports cycle and order, while MDTF "
                              "only supports single_point currently. You can specify more "
                              "than one crossover.")
 
-    parser.add_argument("-s", "--selector", nargs="*",
+    parser.add_argument("-s", "--selectors", nargs="*",
                         choices=["proportional", "linear_rank", "tournament"],
                         default=["proportional", "linear_rank", "tourament"],
                         help="Choose which selector to use. You can specify more than "
