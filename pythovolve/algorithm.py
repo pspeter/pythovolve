@@ -150,7 +150,7 @@ class GeneticAlgorithm(EvolutionAlgorithm):
         for callback in self.callbacks:
             callback.on_generation_start(self.verbosity)
 
-        elites, non_elites = self._split_elites(self.population)
+        elites = self._get_elites(self.population)
 
         children = self._generate_children(self.population_size - self.num_elites)
 
@@ -167,15 +167,15 @@ class GeneticAlgorithm(EvolutionAlgorithm):
         for callback in self.callbacks:
             callback.on_generation_end(self.verbosity)
 
-    def _split_elites(self, population: List[Individual]) -> Tuple[List[Individual], List[Individual]]:
+    def _get_elites(self, population: List[Individual]) -> List[Individual]:
         """
-        :param population: Population to be split into elites and non-elites
-        :return: (elites, non-elites)
+        :param population: Population to be split into elites
+        :return: list of top <self.num_elites> individuals
         """
         if self.num_elites == 0:
-            return [], population
-        sorted_population = sorted(population)
-        return sorted_population[:self.num_elites], sorted_population[self.num_elites:]
+            return []
+
+        return sorted(population)[:self.num_elites]
 
     def _generate_children(self, num_children: int):
         children = []
