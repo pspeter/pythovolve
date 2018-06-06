@@ -34,11 +34,12 @@ class LinearRankSelector(Selector):
 
 
 class TournamentSelector(Selector):
-    def __init__(self):
+    def __init__(self, tournament_size: int = 5):
         super().__init__()
+        self.tournament_size = tournament_size
 
-    def __call__(self, population: Sequence[Individual], tournament_size=5) -> Individual:
-        chosen = random.choices(population, k=tournament_size)
+    def __call__(self, population: Sequence[Individual]) -> Individual:
+        chosen = random.choices(population, k=self.tournament_size)
         return min(chosen, key=lambda ind: ind.score)
 
 
