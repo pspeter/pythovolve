@@ -50,7 +50,7 @@ class EvolutionAlgorithm(metaclass=ABCMeta):
         self.current_best_scores = []
         self.callbacks = callbacks or []
         for callback in self.callbacks:
-            callback.subscribe(self)
+            self.subscribe(callback)
 
         # Note: interactive plotting has only been tested with backend TkAgg and
         # does definitely not work in Pycharm's SciView as of version 2018.1.4
@@ -62,7 +62,7 @@ class EvolutionAlgorithm(metaclass=ABCMeta):
         return self._population
 
     @population.setter
-    def population(self, population: List[Individual]):
+    def population(self, population: List[Individual]) -> None:
         self._population = population
 
         for individual in self.population:
@@ -177,7 +177,7 @@ class GeneticAlgorithm(EvolutionAlgorithm):
 
         return sorted(population)[:self.num_elites]
 
-    def _generate_children(self, num_children: int):
+    def _generate_children(self, num_children: int) -> List[Individual]:
         children = []
 
         for _ in range(num_children // 2):
@@ -242,7 +242,7 @@ class OSGeneticAlgorithm(GeneticAlgorithm):
         self.success_ratio = success_ratio
         self.selection_pressure = 0
 
-    def _generate_children(self, num_children):
+    def _generate_children(self, num_children: int) -> List[Individual]:
         success_children = []
         failure_children = []
 

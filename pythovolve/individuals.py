@@ -27,7 +27,7 @@ class Individual:
         raise NotImplementedError(f"Subclass '{type(self).__name__}' has not implemented this method")
 
     @classmethod
-    def create_random(cls, *args):
+    def create_random(cls, *args) -> "Individual":
         raise NotImplementedError(f"Subclass '{cls.__name__}' has not implemented this method")
 
     def __repr__(self):
@@ -61,7 +61,7 @@ class BinaryIndividual(Individual):
         return type(self)(self.phenotype[:])
 
     @classmethod
-    def create_random(cls, size: int):
+    def create_random(cls, size: int) -> "BinaryIndividual":
         return cls([random.choice([True, False] for _ in range(size))])
 
     def __str__(self):
@@ -76,7 +76,7 @@ class PathIndividual(Individual):
         return type(self)(self.phenotype[:])
 
     @classmethod
-    def create_random(cls, size: int):
+    def create_random(cls, size: int) -> "PathIndividual":
         return cls(random.sample(range(size), size))
 
 
@@ -85,9 +85,10 @@ class RealValueIndividual(Individual):
         super().__init__(phenotype)
         self.value_range = value_range
 
-    def clone(self) -> Individual:
+    def clone(self) -> "RealValueIndividual":
         return type(self)(self.phenotype[:], self.value_range)
 
     @classmethod
-    def create_random(cls, size: int, value_range: Tuple[float, float] = (-1, 1)):
+    def create_random(cls, size: int,
+                      value_range: Tuple[float, float] = (-1, 1)) -> "RealValueIndividual":
         return cls([random.uniform(*value_range) for _ in range(size)], value_range)

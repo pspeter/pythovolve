@@ -75,9 +75,9 @@ class TravellingSalesman(Problem):
         return area
 
     @classmethod
-    def create_random(cls, num_cities,
+    def create_random(cls, num_cities: int,
                       x_range: Tuple[float, float] = (0, 100),
-                      y_range: Tuple[float, float] = (0, 100)):
+                      y_range: Tuple[float, float] = (0, 100)) -> "TravellingSalesman":
         if num_cities < 4:
             raise ValueError("Number of cities smaller than 4")
         cities = [City.create_random(x_range, y_range) for _ in range(num_cities)]

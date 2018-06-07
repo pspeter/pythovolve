@@ -11,16 +11,16 @@ class Callback:
     def subscribe(self, algorithm):
         self.algorithm = algorithm
 
-    def on_generation_start(self, verbosity: int = 1):
+    def on_generation_start(self, verbosity: int = 1) -> None:
         pass
 
-    def on_generation_end(self, verbosity: int = 1):
+    def on_generation_end(self, verbosity: int = 1) -> None:
         pass
 
-    def on_train_start(self, verbosity: int = 1):
+    def on_train_start(self, verbosity: int = 1) -> None:
         pass
 
-    def on_train_end(self, verbosity: int = 1):
+    def on_train_end(self, verbosity: int = 1) -> None:
         pass
 
 
@@ -29,10 +29,10 @@ class TimerCallback(Callback):
         super().__init__()
         self.start_time = None
 
-    def on_train_start(self,  verbosity: int = 1):
+    def on_train_start(self,  verbosity: int = 1) -> None:
         self.start_time = time.time()
 
-    def on_train_end(self,  verbosity: int = 1):
+    def on_train_end(self,  verbosity: int = 1) -> None:
         run_time = time.time() - self.start_time
         try:
             print(f"Timer: Algorithm took {run_time:.2f} seconds and "
@@ -46,7 +46,7 @@ class ProgressLoggerCallback(Callback):
         super().__init__()
         self.print_every = print_every
 
-    def on_generation_end(self,  verbosity: int = 1):
+    def on_generation_end(self,  verbosity: int = 1) -> None:
         if self.algorithm.generation % self.print_every == 0:
             message = f"Progress: Generation {self.algorithm.generation} of {self.algorithm.max_generations} - " \
                       f"total best: {self.algorithm.best.score:.2f}"
@@ -68,14 +68,14 @@ class EarlyStopCallback(Callback):
         self.best: Individual = None
         self.start_time: float = None
 
-    def on_train_start(self, verbosity: int = 1):
+    def on_train_start(self, verbosity: int = 1) -> None:
         if self.max_seconds:
             self.start_time = time.time()
 
-    def on_generation_start(self, verbosity: int = 1):
+    def on_generation_start(self, verbosity: int = 1) -> None:
         self.best = self.algorithm.best
 
-    def on_generation_end(self, verbosity: int = 1):
+    def on_generation_end(self, verbosity: int = 1) -> None:
         if self.algorithm.best is not self.best:
             self.no_progress_cnt = 0
         else:
