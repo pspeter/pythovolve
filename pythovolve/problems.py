@@ -178,15 +178,15 @@ class MultiDimFunction(Problem):
 
 
 sphere_problem = MultiDimFunction("x[0]**2 + x[1]**2 + x[2]**2 + x[3]**2 + x[4]**2", 5, (-5.12, 5.12),
-                                  best_known=RealValueIndividual([0, 0, 0, 0, 0]))
+                                  best_known=RealValueIndividual([0, 0, 0, 0, 0], (-5.12, 5.12)))
 
 _goldstein_price = "(1 + (x[0] + x[1] + 1)**2 * (19 - 14*x[0] + 3*x[0]**2 - 14*x[1] + 6*x[0]*x[1] + 3*x[1]**2)) *" \
                    "(30 + (2*x[0] - 3*x[1])**2 * (18 - 32*x[0] + 12*x[0]**2 + 48*x[1] - 36*x[0]*x[1] + 27*x[1]**2))"
 goldstein_price_problem = MultiDimFunction(_goldstein_price, 2, (-2, 2),
-                                           best_known=RealValueIndividual([0, -1]))
+                                           best_known=RealValueIndividual([0, -1], (-2, 2)))
 
 booth_problem = MultiDimFunction("(x[0] + 2*x[1] - 7)**2 + (2*x[0] + x[1] - 5)**2", 2, (-10, 10),
-                                 best_known=RealValueIndividual([1, 3]))
+                                 best_known=RealValueIndividual([1, 3], (-10, 10)))
 
 hoelder_table_problem = MultiDimFunction("-Abs(sin(x[0])*cos(x[1])*exp(1-((x[0]**2+x[1]**2)**0.5)/pi))", 2,
-                                         (-10, 10), best_known=RealValueIndividual([0.805502, 9.66459]))
+                                         (-10, 10), best_known=RealValueIndividual([0.805502, 9.66459], (-10, 10)))
