@@ -4,7 +4,7 @@ with open("README.md", "r") as fp:
     long_description = fp.read()
 
 setup(name='pythovolve',
-      version='0.1',
+      version='0.1.0',
       description='Object oriented framework for genetic algorithms',
       long_description=long_description,
       long_description_content_type="text/markdown",
