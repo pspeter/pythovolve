@@ -83,6 +83,13 @@ class PathIndividual(Individual):
 class RealValueIndividual(Individual):
     def __init__(self, phenotype: List[float], value_range: Tuple[float, float] = (-1, 1)):
         super().__init__(phenotype)
+
+        if len(phenotype) < 1:
+            raise ValueError("Phenotype must have at least one element")
+
+        if not all(value_range[0] <= value <= value_range[1] for value in phenotype):
+            raise ValueError("Phenotype values must be within value_range")
+
         self.value_range = value_range
 
     def clone(self) -> "RealValueIndividual":
