@@ -1,3 +1,5 @@
+![travis build](https://img.shields.io/travis/peter-schmidbauer/pythovolve.svg)
+
 # pythovolve
 A modular, object-oriented framework for evolutionary and genetic algorithms in Python 3.
 
