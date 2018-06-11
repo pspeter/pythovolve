@@ -5,11 +5,11 @@ from statistics import mean, stdev
 
 from pythovolve.algorithm import EvolutionStrategy, GeneticAlgorithm, OSGeneticAlgorithm, EvolutionAlgorithm
 from pythovolve.callbacks import EarlyStopCallback, TimerCallback, ProgressLoggerCallback
-from pythovolve.crossover import CycleCrossover, OrderCrossover, SinglePointCrossover, MultiCrossover
-from pythovolve.mutation import InversionMutator, TranslocationMutator, GaussNoiseMutator, MultiPathMutator
+from pythovolve.crossover import CycleCrossover, OrderCrossover, SinglePointCrossover
+from pythovolve.mutation import InversionMutator, TranslocationMutator, GaussNoiseMutator
 from pythovolve.problems import sphere_problem, goldstein_price_problem, booth_problem, hoelder_table_problem, \
     MultiDimFunction, TravellingSalesman
-from pythovolve.selection import LinearRankSelector, ProportionalSelector, TournamentSelector, MultiSelector
+from pythovolve.selection import LinearRankSelector, ProportionalSelector, TournamentSelector
 
 
 def _algorithm_from_args(args) -> EvolutionAlgorithm:
@@ -67,21 +67,12 @@ def _algorithm_from_args(args) -> EvolutionAlgorithm:
 
     Algorithm = algorithms[args.algorithm]
 
-    def handle_multiple_names(multi_class, name_dict, arg, **constructor_args):
-        # a bit hacky way to handle multiple mutators, crossovers and selectors
+    def handle_multiple_names(name_dict, arg, **constructor_args):
+        return [name_dict.get(name)(**constructor_args) for name in arg]
 
-        if len(set(arg)) == 1:
-            # if only one name, return corresponding class with name 'arg' in 'name_dict'
-            return name_dict.get(arg[0])(**constructor_args)
-        else:
-            # if more than one name, use 'multi_class' to pack them together
-            chosen = [name_dict.get(s) for s in set(arg)]
-            chosen = [s(*constructor_args) for s in chosen if s is not None]
-            return multi_class(chosen)
-
-    selector = handle_multiple_names(MultiSelector, selectors, args.selector)
-    crossover = handle_multiple_names(MultiCrossover, crossovers, args.crossover)
-    mutator = handle_multiple_names(MultiPathMutator, mutators, args.mutator, probability=args.mutation_rate)
+    selector = handle_multiple_names(selectors, args.selector)
+    crossover = handle_multiple_names(crossovers, args.crossover)
+    mutator = handle_multiple_names(mutators, args.mutator, probability=args.mutation_rate)
 
     kwargs = vars(args).copy()  # copy to not mess with original args for multiple runs
     kwargs["selector"] = selector
