@@ -1,4 +1,6 @@
 ![travis build](https://img.shields.io/travis/peter-schmidbauer/pythovolve.svg)
+![PyPI - License](https://img.shields.io/pypi/l/pythovolve.svg)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pythovolve.svg)
 
 # pythovolve
 A modular, object-oriented framework for evolutionary and genetic algorithms in Python 3.
