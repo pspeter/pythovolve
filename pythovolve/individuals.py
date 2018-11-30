@@ -50,7 +50,8 @@ class Individual:
             return NotImplemented
 
     def __str__(self):
-        return f"{type(self).__name__}({str(self.phenotype)}) with score {self.score}"
+        return f"{type(self).__name__}({str(self.phenotype)})" + \
+            " with score {self.score}" if self._score is not None else ""
 
 
 class BinaryIndividual(Individual):
