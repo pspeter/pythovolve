@@ -10,7 +10,7 @@ A modular, object-oriented framework for evolutionary and genetic algorithms in 
 
 ### Installation using pip
 
-Make sure you have Python 3.6 installed by executing `python --version` in your command line.
+Make sure you have Python 3.6+ installed by executing `python --version` in your command line.
 
 Next, simply execute 
 
