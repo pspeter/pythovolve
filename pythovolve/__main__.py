@@ -14,50 +14,49 @@ from pythovolve.selection import LinearRankSelector, ProportionalSelector, Tourn
 
 def _algorithm_from_args(args) -> EvolutionAlgorithm:
 
-    predefined = {
+    predefined_dict = {
         "sphere": sphere_problem,
         "goldstein_price": goldstein_price_problem,
         "booth": booth_problem,
         "hoelder_table": hoelder_table_problem
     }
 
-    problems = {
+    problem_dict = {
         "TSP": TravellingSalesman,
         "MDTF": MultiDimFunction
     }
 
-    algorithms = {
+    algorithm_dict = {
         "ES": EvolutionStrategy,
         "GA": GeneticAlgorithm,
         "OSGA": OSGeneticAlgorithm
     }
 
-    selectors = {
+    selector_dict = {
         "proportional": ProportionalSelector,
         "linear_rank": LinearRankSelector,
         "tournament": TournamentSelector
     }
 
-    mutators = {
+    mutator_dict = {
         "inversion": InversionMutator,
         "translocation": TranslocationMutator,
         "gauss": GaussNoiseMutator
     }
 
-    crossovers = {
+    crossover_dict = {
         "cycle": CycleCrossover,
         "order": OrderCrossover,
         "single_point": SinglePointCrossover
     }
 
     if args.predefined:
-        problem = predefined[args.predefined]
+        problem = predefined_dict[args.predefined]
     else:
-
         if args.random is not None:
-            problem = problems[args.problem_type].create_random(args.random)
+            problem = problem_dict[args.problem_type].create_random(args.random)
         elif args.problem_file:
-            problem = problems[args.problem_type].from_file(Path(args.problem_file))
+            problem = problem_dict[args.problem_type].from_file(Path(args.problem_file))
         else:
             warnings.warn("Cannot create problem with given parameters. Use either "
                           "-d to specify a predefined problem, or use one of -r "
@@ -65,19 +64,19 @@ def _algorithm_from_args(args) -> EvolutionAlgorithm:
             warnings.warn("Defaulting to random TSP with 50 cities.")
             problem = TravellingSalesman.create_random(50)
 
-    Algorithm = algorithms[args.algorithm]
+    Algorithm = algorithm_dict[args.algorithm]
 
     def handle_multiple_names(name_dict, arg, **constructor_args):
         return [name_dict.get(name)(**constructor_args) for name in arg]
 
-    selector = handle_multiple_names(selectors, args.selector)
-    crossover = handle_multiple_names(crossovers, args.crossover)
-    mutator = handle_multiple_names(mutators, args.mutator, probability=args.mutation_rate)
+    selectors = handle_multiple_names(selector_dict, args.selectors)
+    crossovers = handle_multiple_names(crossover_dict, args.crossovers)
+    mutators = handle_multiple_names(mutator_dict, args.mutators, probability=args.mutation_rate)
 
     kwargs = vars(args).copy()  # copy to not mess with original args for multiple runs
-    kwargs["selector"] = selector
-    kwargs["crossover"] = crossover
-    kwargs["mutator"] = mutator
+    kwargs["selectors"] = selectors
+    kwargs["crossovers"] = crossovers
+    kwargs["mutators"] = mutators
     kwargs["callbacks"] = []
 
     if args.min_sigma or args.no_progress or args.max_seconds:
@@ -176,7 +175,7 @@ def main():
 
     parser.add_argument("-s", "--selectors", nargs="*",
                         choices=["proportional", "linear_rank", "tournament"],
-                        default=["proportional", "linear_rank", "tourament"],
+                        default=["proportional", "linear_rank", "tournament"],
                         help="Choose which selector to use. You can specify more than "
                              "one. Each call will randomly choose among one of them.")
 

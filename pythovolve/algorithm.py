@@ -50,7 +50,7 @@ class EvolutionAlgorithm(metaclass=ABCMeta):
         self.current_best_scores = []
         self.callbacks = callbacks or []
         for callback in self.callbacks:
-            self.subscribe(callback)
+            callback.subscribe(self)
 
         # Note: interactive plotting has only been tested with backend TkAgg and
         # does definitely not work in Pycharm's SciView as of version 2018.1.4
