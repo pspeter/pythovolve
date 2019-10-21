@@ -63,7 +63,7 @@ class BinaryIndividual(Individual):
 
     @classmethod
     def create_random(cls, size: int) -> "BinaryIndividual":
-        return cls([random.choice([True, False] for _ in range(size))])
+        return cls([random.choice([True, False]) for _ in range(size)])
 
     def __str__(self):
         return "".join(("1" if bit else "0" for bit in self.phenotype))
