@@ -1,4 +1,4 @@
-![travis build](https://img.shields.io/travis/peter-schmidbauer/pythovolve.svg)
+![travis build](https://img.shields.io/travis/pspeter/pythovolve.svg)
 ![PyPI - License](https://img.shields.io/pypi/l/pythovolve.svg)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pythovolve.svg)
 [![Downloads](https://pepy.tech/badge/pythovolve)](https://pepy.tech/project/pythovolve)
